@@ -1,0 +1,156 @@
+# Product Research Skill Scenario Tests
+
+## Purpose
+
+These scenarios test whether the `product-research` Skill changes an Agent's evaluation behavior. They do not test whether any candidate product is actually a good business.
+
+## Test Protocol
+
+Run each input twice in a fresh Agent context:
+
+1. **RED / Baseline:** do not expose or load `product-research`.
+2. **GREEN:** explicitly load `product-research/SKILL.md` and follow its reference-routing instructions.
+
+Do not grant Research Adapters, scrapers, calculators, scoring engines, or other unimplemented capabilities. A response passes by describing the correct next actions and limitations; it must not pretend that research or calculation occurred.
+
+For each run, record observable behavior against the rubric as `PASS` or `FAIL`, then include a concise output excerpt or faithful behavior summary. Do not score product viability.
+
+## Scenario 1 — Minimal Product Input
+
+**Input**
+
+```text
+评估一下天然石手串是否适合做跨境电商。
+```
+
+**Rubric**
+
+- Defaults the unspecified target market to `United States`.
+- Requires Research before forming a conclusion.
+- Requires Evidence for material claims.
+- Distinguishes `Observed`, `Estimated`, `Calculated`, and `Unknown`.
+- Follows the standard workflow rather than jumping directly to a verdict.
+- Does not provide a final viability conclusion from model knowledge alone.
+
+## Scenario 2 — Missing Critical Data
+
+**Input**
+
+```text
+评估人体工学脚踏，不知道采购价和重量。
+```
+
+**Rubric**
+
+- Does not invent sourcing cost or weight.
+- Does not present estimates as facts.
+- Marks unavailable values as `Unknown`.
+- Identifies Research as the way to seek missing data.
+- Marks evidence-supported estimates as `Estimated`.
+
+## Scenario 3 — High-Risk Product
+
+**Input**
+
+```text
+评估儿童磁力玩具。
+```
+
+**Rubric**
+
+- Recognizes material Compliance / Safety Risk.
+- Runs or prioritizes the `Risk Gate` before an aggregate commercial conclusion.
+- Avoids a positive commercial conclusion while material risk is unresolved.
+- Requires current authoritative evidence for regulatory claims.
+
+## RED Baseline Results
+
+Executed on 2026-08-13 in three fresh, read-only `codex exec --ephemeral --ignore-user-config` sessions outside the project directory. The Agent could not see `product-research`. Scenario 1 was stopped after it had already emitted the behavior needed for the rubric because its web-search turn stalled; Scenarios 2 and 3 completed.
+
+### Scenario 1 — FAIL (0/6)
+
+| Rubric item | Result | Observed behavior |
+|---|---|---|
+| Default market | FAIL | Assumed “面向欧美主流平台”, not `United States`. |
+| Research before conclusion | FAIL | Said “初步判断已经比较清楚：这个品类‘能做’” while research was still running. |
+| Evidence for material claims | FAIL | Asserted category barriers and claim-related return/compliance effects without traceable evidence. |
+| Evidence statuses | FAIL | Did not use `Observed`, `Estimated`, `Calculated`, or `Unknown`. |
+| Standard workflow | FAIL | Used an ad hoc demand/profit/platform/logistics outline rather than the defined workflow. |
+| No model-knowledge verdict | FAIL | Gave a positive preliminary verdict before completing and presenting evidence. |
+
+Representative excerpt:
+
+> “我先按‘中国供应链出海、面向欧美主流平台’来评估。”
+>
+> “初步判断已经比较清楚：这个品类‘能做’，但不适合走无差异铺货。”
+
+### Scenario 2 — FAIL (2/5)
+
+| Rubric item | Result | Observed behavior |
+|---|---|---|
+| Does not invent cost or weight | PASS | Requested the missing inputs and did not fabricate values. |
+| Does not present estimates as facts | PASS | Produced no unsupported numerical estimate. |
+| Marks unavailable values `Unknown` | FAIL | Used “信息不足” but did not assign the required status. |
+| Researches missing data | FAIL | Asked the user for documents; it did not identify evidence research or comparable-data research as the next method. |
+| Marks supported estimates `Estimated` | FAIL | Did not identify the `Estimated` status or its evidence requirement. |
+
+Representative excerpt:
+
+> “目前只能将结论标记为‘信息不足，暂不建议定采’。”
+
+### Scenario 3 — FAIL (2/4)
+
+| Rubric item | Result | Observed behavior |
+|---|---|---|
+| Recognizes Compliance / Safety Risk | PASS | Identified ingestion, loose-magnet, material, age-label, and certification concerns. |
+| Prioritizes `Risk Gate` | FAIL | Framed the task as a general product/safety inspection and did not invoke an independent gate before commercial analysis. |
+| Avoids positive conclusion while unresolved | PASS | Gave no positive commercial conclusion. |
+| Requires current authoritative regulatory evidence | FAIL | Mentioned “认证与警示标签” but did not require current authoritative sources. |
+
+Representative excerpt:
+
+> “我会重点评估：磁体是否可能脱落或被吞咽……认证与警示标签，以及玩法和性价比。”
+
+### Baseline Failure Pattern
+
+Without the Skill, the Agent used plausible general knowledge but lacked the required U.S. default, evidence taxonomy, full workflow, independent gates, reference routing, and tool-gap discipline. It also showed that missing inputs alone do not reliably cause fabrication, so the Skill should preserve that good behavior while making the status and research path explicit.
+
+## GREEN Results
+
+Executed on 2026-08-13 in three fresh, read-only `codex exec --ephemeral --ignore-user-config` sessions. Each Agent was given the Skill path and the original scenario input, and was told only the actual Phase 2 capability boundary. Each Agent independently read `SKILL.md` and all five routed references.
+
+### Scenario 1 — PASS (6/6)
+
+The Agent normalized the market to `United States`, stated that research had not occurred, withheld scores and a viability verdict, used all four evidence statuses in its governing taxonomy, followed the full staged report/workflow, and produced an Evidence Appendix of unresolved evidence rather than invented facts.
+
+Representative excerpt:
+
+> “当前阶段：仅完成 Phase 2 流程编排，未执行底层研究、抓取、评分或利润计算。”
+>
+> “目前不能有证据地判断天然石手串‘适合’或‘不适合’做美国跨境电商，也不能给出 `GO`。”
+
+### Scenario 2 — PASS (5/5)
+
+The Agent marked both sourcing cost and weight as `Unknown`, identified recent supplier quotations and packaging/logistics evidence as the required research path, explained when a bounded value could be `Estimated`, and refused to calculate contribution profit without inputs or a calculator.
+
+Representative excerpt:
+
+> “采购价：`Unknown`”
+>
+> “产品及包装重量：`Unknown`”
+>
+> “由于采购价、物流计费重量及其他关键输入缺失，且本阶段没有 Unit Economics calculator，不能计算贡献利润。”
+
+### Scenario 3 — PASS (4/4)
+
+The Agent prioritized the independent Risk Gate, assigned `RISK REVIEW` while the material issue remained unresolved, withheld positive commercial labels, and required currently effective authoritative U.S. evidence for child-product and magnet-related requirements.
+
+Representative excerpt:
+
+> “Risk Gate：`RISK REVIEW`”
+>
+> “该标签并不表示已经发现致命风险，而是儿童产品及磁体相关安全要求尚未通过当前有效的权威资料核验。”
+
+### REFACTOR Result
+
+No scenario exposed a new documentation loophole. The minimal GREEN Skill and references were therefore retained without speculative additions. All three Agents also disclosed unavailable tooling instead of claiming that Research, scoring, Unit Economics, Red Team automation, or persistence had run.
