@@ -1,5 +1,11 @@
 # Evidence Policy
 
+## Shared Evidence Representation
+
+Evidence producers use the shared [`Evidence` contract](../product_research/evidence.py) for the structural record and [`EvidenceId`](../product_research/evidence.py) for downstream references. Its JSON boundary is deterministic and its `observed_at` value identifies when the Evidence content was observed or confirmed; it does not replace source publication or effective dates in policy analysis.
+
+The contract validates representational shape only. Tier/source quality, freshness, source independence, conflict handling, confidence assessment, and policy acceptability remain governed by this document and later policy capabilities; consumers reference an Evidence record by ID rather than defining a second Evidence shape.
+
 ## Core Discipline
 
 `No evidence → no factual claim.` Research before conclusions. Every material claim must be traceable to evidence; critical commercial judgments should use at least two independent sources where practical.
@@ -57,4 +63,3 @@ Assign `High`, `Medium`, or `Low` to major conclusions using source count, tier,
 Record an ID, claim, evidence, source, evidence date, tier, status, and confidence. A citation is valid only when the source actually supports the claim.
 
 If a required source or research capability is unavailable, say so. Do not invent sales, keyword volumes, prices, certifications, regulations, patents, reviews, citations, or source access.
-

@@ -24,7 +24,7 @@ The Executive Summary must name the candidate product, target market, strongest 
 
 ## Scorecard
 
-For each of the eight dimensions, include score, base weight, final weight when adjusted, weighted score, confidence, and supporting Evidence IDs. Surface core-threshold failures separately. Use unresolved markers rather than fabricated scores when evidence or calculation capability is missing.
+For each of the eight dimensions, include score, base weight, final weight when adjusted, weighted score, confidence, and supporting Evidence IDs. Those IDs reference records governed by the shared [`Evidence` contract](../product_research/evidence.py); downstream findings, scores, gates, and Red Team revisions must retain IDs rather than embedding an alternative Evidence structure. Surface core-threshold failures separately. Use unresolved markers rather than fabricated scores when evidence or calculation capability is missing.
 
 ## Final Analysis Label
 
@@ -45,5 +45,4 @@ Include at least:
 |---|---|---|---|---|---|---|---|
 | E001 | — | — | — | — | — | `Observed` / `Estimated` / `Calculated` / `Unknown` | `High` / `Medium` / `Low` |
 
-Use unique Evidence IDs and reference them from material claims, scores, gate findings, and Red Team revisions. `Key Evidence` highlights the most decision-relevant records; `Key Uncertainties` states missing or conflicting evidence and its effect on confidence or labels.
-
+Use unique Evidence IDs and reference them from material claims, scores, gate findings, and Red Team revisions. `Key Evidence` highlights the most decision-relevant records; `Key Uncertainties` states missing or conflicting evidence and its effect on confidence or labels. Report producers and consumers should use the shared Evidence ID boundary instead of copying a parallel core record.

@@ -24,11 +24,12 @@ Read each reference before performing its stage:
 |---|---|
 | Research planning and dimension analysis | [references/methodology.md](references/methodology.md) |
 | Evidence collection, status, freshness, and confidence | [references/evidence-policy.md](references/evidence-policy.md) |
+| Evidence representation and Evidence ID boundary | [product_research/evidence.py](product_research/evidence.py) |
 | Eight-dimension scoring and thresholds | [references/scoring-policy.md](references/scoring-policy.md) |
 | Risk and Unit Economics gates | [references/gates.md](references/gates.md) |
 | Final output | [references/report-contract.md](references/report-contract.md) |
 
-For a full evaluation, read all five references. For a narrower follow-up, read every reference governing the requested stage and any upstream evidence or gate rules it depends on.
+For a full evaluation, read all five references and the shared Evidence representation when creating or exchanging Evidence records. For a narrower follow-up, read every reference governing the requested stage and any upstream evidence or gate rules it depends on.
 
 ## Workflow
 
@@ -55,7 +56,7 @@ Do not skip an earlier stage merely because a later-stage answer appears intuiti
 
 ## Unimplemented Capabilities
 
-This phase provides orchestration only. Research adapters, marketplace or supplier scrapers, evidence persistence, scoring/calculation engines, VOC clustering, risk scanning, Red Team automation, and report-generation code do not exist yet.
+This phase provides orchestration plus the shared structural Evidence representation. Research adapters, marketplace or supplier scrapers, Evidence Policy validation, evidence persistence, scoring/calculation engines, VOC clustering, risk scanning, Red Team automation, and report-generation code do not exist yet.
 
 Use only tools actually available in the current environment. Never claim to have accessed a source, collected data, run a calculation, or completed a workflow stage when that capability was unavailable. In that case:
 
@@ -63,4 +64,3 @@ Use only tools actually available in the current environment. Never claim to hav
 2. Preserve missing values as `Unknown` unless existing evidence supports a bounded `Estimated` value.
 3. Describe the evidence or deterministic calculation still required.
 4. Withhold unsupported scores and unqualified `GO` conclusions.
-
