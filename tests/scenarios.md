@@ -154,3 +154,113 @@ Representative excerpt:
 ### REFACTOR Result
 
 No scenario exposed a new documentation loophole. The minimal GREEN Skill and references were therefore retained without speculative additions. All three Agents also disclosed unavailable tooling instead of claiming that Research, scoring, Unit Economics, Red Team automation, or persistence had run.
+
+## Evidence Policy Validation Acceptance Scenarios
+
+These are the acceptance scenarios for the `evidence-policy-validation` capability. They state the observable contract shared by the validator and the focused unit tests in `tests/test_evidence_policy.py`. Validation is deterministic, read-only, and fail closed: it never mutates Evidence, fills missing metadata, upgrades a tier or status, guesses a source classification, or consults a system clock.
+
+### Structural-versus-policy separation
+
+- **WHEN** a structurally valid Evidence record is submitted for factual use
+- **THEN** the system returns a policy result without treating model construction as policy acceptance
+
+- **WHEN** Evidence has a tier mismatch, missing policy date, or unknown source classification
+- **THEN** validation rejects the use and leaves the Evidence unchanged
+
+### Source and tier mapping
+
+- **WHEN** fresh marketplace Evidence has an exact registered first-party marketplace Source and `Tier 2`
+- **THEN** Source and tier validation passes
+
+- **WHEN** the same registered marketplace Source is assigned `Tier 1`
+- **THEN** validation returns `REJECT` with `TIER_MISMATCH`
+
+- **WHEN** no exact registry entry exists for the Evidence Source
+- **THEN** validation returns `REJECT` with `UNSUPPORTED_SOURCE` without guessing from its reference
+
+### Status and claim-mode compatibility
+
+- **WHEN** `Estimated` Evidence is validated for `OBSERVED_FACT`
+- **THEN** validation returns `REJECT` with `STATUS_NOT_FACT_ELIGIBLE`
+
+- **WHEN** `Calculated` Evidence is validated for `DERIVED_VALUE` and passes every other policy rule
+- **THEN** it may be fact eligible without being represented as observed
+
+- **WHEN** `Unknown` Evidence is validated under any claim mode
+- **THEN** validation returns `REJECT` with `STATUS_NOT_FACT_ELIGIBLE`
+
+### Explicit as-of
+
+- **WHEN** the same Evidence, policy, context, and index are validated repeatedly with the same explicit `as_of`
+- **THEN** every validation returns the same outcome, factual eligibility, and ordered reason codes
+
+- **WHEN** validation receives no `as_of` or a timezone-naive `as_of`
+- **THEN** it returns `REJECT` and does not consult the system clock
+
+- **WHEN** Evidence has `observed_at` later than `as_of`
+- **THEN** validation returns `REJECT` with `FUTURE_OBSERVATION`
+
+### Freshness and policy metadata
+
+- **WHEN** marketplace, market, competition, supplier, or VOC Evidence lacks its required source date in `metadata.policy`
+- **THEN** validation returns `REJECT` with `MISSING_FRESHNESS_METADATA` without substituting `observed_at`
+
+- **WHEN** `metadata.policy.kind` is not supported by the supplied policy
+- **THEN** validation returns `REJECT` with `UNSUPPORTED_EVIDENCE_KIND`
+
+- **WHEN** marketplace-price Evidence is more than 365 days old and is validated for `CURRENT` use
+- **THEN** it is not fact eligible and reports `STALE_EVIDENCE`
+
+- **WHEN** supplier-quotation Evidence is 91 days old and is validated for `CURRENT` use
+- **THEN** it is not fact eligible and reports `STALE_EVIDENCE`
+
+- **WHEN** otherwise valid old price Evidence is validated for `HISTORICAL` use
+- **THEN** it returns `CONTEXT_ONLY` and may support the dated historical fact without supporting a current-price fact
+
+- **WHEN** VOC Evidence is more than 730 days old and is validated for `CURRENT` use
+- **THEN** it is not fact eligible and reports `STALE_EVIDENCE`
+
+- **WHEN** older VOC Evidence includes a non-empty `continuing_relevance_justification` and is validated for `CONTEXT` use
+- **THEN** it returns `CONTEXT_ONLY` and may support only the explicitly contextual use
+
+- **WHEN** authoritative Tier 1 regulation Evidence has an effective date on or before `as_of` and current-version verification within the policy window
+- **THEN** it may return `ACCEPT_CURRENT` and be fact eligible
+
+- **WHEN** regulation Evidence lacks `verified_current_at`
+- **THEN** validation returns `REJECT` with `MISSING_FRESHNESS_METADATA`
+
+- **WHEN** older long-term industry Evidence supplies its source year and a continuing-relevance justification for `CONTEXT` use
+- **THEN** it returns `CONTEXT_ONLY` without being promoted to current Evidence
+
+- **WHEN** long-term industry Evidence omits `source_year`
+- **THEN** validation returns `REJECT` with `MISSING_FRESHNESS_METADATA`
+
+### Collection integrity and citations
+
+- **WHEN** two Evidence records in one collection use `E001`
+- **THEN** collection validation returns `REJECT` with `DUPLICATE_EVIDENCE_ID` for `E001`
+
+- **WHEN** a material claim supplies no Evidence IDs
+- **THEN** claim-support validation returns `REJECT` with `MISSING_CITATION`
+
+- **WHEN** a claim cites an Evidence ID absent from the validated Evidence index
+- **THEN** claim-support validation returns `REJECT` with `UNKNOWN_EVIDENCE_ID`
+
+- **WHEN** a cited Evidence ID resolves but that Evidence is stale for the claim's `CURRENT` use
+- **THEN** claim-support validation returns `REJECT` and does not count the citation as factual support
+
+### Critical claims
+
+- **WHEN** every otherwise eligible citation for a critical claim is `Tier 4`
+- **THEN** claim-support validation returns `REJECT` with `TIER4_SOLE_CRITICAL_SUPPORT`
+
+- **WHEN** a critical claim cites eligible Tier 4 Evidence and at least one eligible non-Tier-4 Evidence record
+- **THEN** the Tier 4 restriction alone does not reject the claim
+
+### Deterministic structured results
+
+- **WHEN** the same input violates more than one policy rule
+- **THEN** repeated validation returns the same ordered reason-code sequence
+
+- **WHEN** policy evaluation raises an exception or reaches an indeterminate state
+- **THEN** the public boundary returns `REJECT` with `VALIDATION_ERROR`

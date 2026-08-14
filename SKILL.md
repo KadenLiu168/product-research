@@ -56,7 +56,7 @@ Do not skip an earlier stage merely because a later-stage answer appears intuiti
 
 ## Unimplemented Capabilities
 
-This phase provides orchestration plus the shared structural Evidence representation. Research adapters, marketplace or supplier scrapers, Evidence Policy validation, evidence persistence, scoring/calculation engines, VOC clustering, risk scanning, Red Team automation, and report-generation code do not exist yet.
+This phase provides orchestration, the shared structural Evidence representation, and deterministic Evidence Policy validation. Research adapters, marketplace or supplier scrapers, evidence persistence, scoring/calculation engines, VOC clustering, risk scanning, Red Team automation, and report-generation code do not exist yet.
 
 Use only tools actually available in the current environment. Never claim to have accessed a source, collected data, run a calculation, or completed a workflow stage when that capability was unavailable. In that case:
 
