@@ -4,7 +4,7 @@
 
 Evidence producers use the shared [`Evidence` contract](../product_research/evidence.py) for the structural record and [`EvidenceId`](../product_research/evidence.py) for downstream references. Its JSON boundary is deterministic and its `observed_at` value identifies when the Evidence content was observed or confirmed; it does not replace source publication or effective dates in policy analysis.
 
-The contract validates representational shape only. The separate [`Evidence Policy validation`](../product_research/evidence_policy.py) boundary validates Tier/source eligibility, freshness, and citation integrity. Source independence, conflict handling, confidence assessment, and semantic support remain governed by this document and later capabilities; consumers reference an Evidence record by ID rather than defining a second Evidence shape.
+The contract validates representational shape only. The separate [`Evidence Policy validation`](../product_research/evidence_policy.py) boundary validates Tier/source eligibility, freshness, and citation integrity, and the separate [`Evidence Assessment`](../product_research/evidence_assessment.py) boundary assesses multi-source consistency, explicit source independence, conflict preservation, missing information, and claim-level Confidence. Semantic support decisions remain governed by this document; consumers reference an Evidence record by ID rather than defining a second Evidence shape.
 
 ## Core Discipline
 
@@ -44,6 +44,8 @@ Never convert `Estimated` or `Unknown` into `Observed`. User-provided facts take
 
 Use `>= 2 independent sources` for key commercial judgments where practical. Independence means the sources do not merely repeat the same underlying claim.
 
+When Evidence records for one proposition have been collected, run the deterministic [`Evidence Assessment`](../product_research/evidence_assessment.py) boundary with explicit per-record stances and independence groups before describing cross-validation or conflict. Independence groups and stances are explicit assessment inputs and are never inferred from provider, URL, domain, or Evidence text. Assessment preserves both sides of a conflict, counts known independent supporting sources, and caps claim-level Confidence without picking a winner.
+
 When credible sources conflict:
 
 1. Preserve and surface both.
@@ -57,6 +59,8 @@ Do not selectively hide adverse evidence.
 ## Confidence
 
 Assign `High`, `Medium`, or `Low` to major conclusions using source count, tier, freshness, independence, agreement, sample size, estimate share, and overall data quality. A high score based on low-confidence evidence remains low confidence.
+
+Claim-level assessment Confidence returned by [`Evidence Assessment`](../product_research/evidence_assessment.py) is separate from each record's individual `Evidence.confidence`. Assessment starts from `High` and applies deterministic ceilings — no usable support, eligible conflict, Tier-4-only support, material or critical missing information, insufficient or unknown independence, unknown stance, and the strongest usable supporting record's individual Confidence — and it never overwrites or changes an individual record's `confidence`.
 
 ## Minimum Evidence Record
 

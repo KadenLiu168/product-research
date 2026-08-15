@@ -264,3 +264,94 @@ These are the acceptance scenarios for the `evidence-policy-validation` capabili
 
 - **WHEN** policy evaluation raises an exception or reaches an indeterminate state
 - **THEN** the public boundary returns `REJECT` with `VALIDATION_ERROR`
+
+## Evidence Assessment Acceptance Scenarios
+
+These are the acceptance scenarios for the `evidence-confidence-conflict` capability. They state the observable contract shared by `product_research/evidence_assessment.py` and the focused unit tests in `tests/test_evidence_assessment.py`. Assessment is deterministic, read-only, and fail closed: it never mutates Evidence, never infers stance or independence from text or provenance, and never replaces Evidence Policy eligibility.
+
+### Explicit stance and independence
+
+- **WHEN** one requested Evidence ID is declared `SUPPORTS` and another is declared `CONTRADICTS`
+- **THEN** the result preserves the IDs in separately ordered supporting and contradicting collections without comparing their free text
+
+- **WHEN** two policy-eligible decision-relevant Evidence records are assigned to the same underlying-source group
+- **THEN** the result reports two resolved source records but one independent source
+
+- **WHEN** multiple policy-eligible supporting Evidence records have explicit unknown independence
+- **THEN** none of those records increases the independent-source count and the result includes `INDEPENDENCE_UNKNOWN`
+
+- **WHEN** two Evidence records contain different free text or providers but their stance assignments are absent or invalid
+- **THEN** assessment returns a fail-closed `INSUFFICIENT` and `Low` result rather than inferring agreement or conflict
+
+### Policy-result preservation
+
+- **WHEN** an Evidence record returns `ACCEPT_CURRENT` with `fact_eligible=true`
+- **THEN** its ID is preserved as current-accepted and usable for assessment
+
+- **WHEN** an Evidence record returns `CONTEXT_ONLY`
+- **THEN** its ID is preserved as context-only and is usable only when the existing policy result declares it fact eligible for the supplied scope
+
+- **WHEN** assessment evaluates a requested Evidence ID
+- **THEN** the applicable policy outcome, `fact_eligible` value, and ordered policy reason codes are preserved in the ordered per-record policy results
+
+### Adverse exclusion
+
+- **WHEN** fresh supporting Evidence is usable for a current claim and stale contradicting Evidence is rejected with `STALE_EVIDENCE`
+- **THEN** the stale ID remains in both the contradicting and excluded collections with `STALE_EVIDENCE`, while eligible conflict state remains `NONE`
+
+### Outcomes
+
+- **WHEN** at least one usable Evidence record supports the proposition and at least one usable Evidence record contradicts it
+- **THEN** the result is `CONFLICTED` with conflict state `PRESENT` and both sides preserved
+
+- **WHEN** no requested Evidence record is both policy usable and declared `SUPPORTS`
+- **THEN** the result is `INSUFFICIENT` with `Low` Confidence
+
+### Missing information
+
+- **WHEN** `supplier_price` is explicitly declared missing with `MATERIAL` severity
+- **THEN** the result preserves that entry and includes `MATERIAL_INFORMATION_MISSING`
+
+- **WHEN** duplicate missing-information keys or malformed entries are supplied
+- **THEN** assessment returns a structured fail-closed result
+
+### Confidence ceilings
+
+- **WHEN** two policy-usable `SUPPORTS` records have different known independence groups, both have individual `High` Confidence, the required minimum is two, no contradiction exists, no material information is missing, and no other ceiling applies
+- **THEN** the result is `SUPPORTED` with conflict state `NONE`, independent-source count two, and assessment Confidence `High`
+
+- **WHEN** every policy-usable supporting Evidence record is `Tier 4`
+- **THEN** assessment Confidence is capped at `Low` with `ONLY_LOW_TIER_SUPPORT` without changing any policy result
+
+- **WHEN** otherwise strong agreeing Evidence is accompanied by a `MATERIAL` missing-information entry
+- **THEN** assessment Confidence is capped at `Low` with `MATERIAL_INFORMATION_MISSING`
+
+- **WHEN** one known independent supporting source is usable and the assessment context requires two independent sources
+- **THEN** Confidence is capped at `Medium` with `INSUFFICIENT_INDEPENDENT_SOURCES`
+
+- **WHEN** one otherwise strong known independent supporting source is usable and the assessment context explicitly requires one independent source
+- **THEN** the single-source rule does not itself cap Confidence
+
+- **WHEN** every usable supporting Evidence record has individual Confidence `Low`
+- **THEN** assessment Confidence is capped at `Low` with `LOW_BASE_CONFIDENCE`
+
+### Immutability
+
+- **WHEN** a collection is assessed and the Evidence values are serialized before and after assessment
+- **THEN** every Evidence value, individual Confidence, and serialized representation remains unchanged
+
+- **WHEN** equivalent Evidence, indexes, relations, independence assignments, missing-information entries, contexts, and policies are supplied repeatedly in different container orders
+- **THEN** every run returns equivalent values with identical Evidence-ID, policy-issue, missing-information, and factor ordering
+
+### Fail-closed inputs
+
+- **WHEN** a requested Evidence ID is absent from the supplied index
+- **THEN** assessment returns `INSUFFICIENT`, `Low`, and `ASSESSMENT_INPUT_ERROR` without inventing an Evidence record or source group
+
+- **WHEN** the requested collection or supplied Evidence collection contains a duplicate Evidence ID
+- **THEN** assessment returns a structured fail-closed result rather than selecting one record
+
+### Deterministic ordering
+
+- **WHEN** the same input violates more than one Confidence ceiling
+- **THEN** the emitted factor sequence follows one fixed priority with duplicates removed and the strictest ceiling wins
