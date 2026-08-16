@@ -26,6 +26,7 @@ Read each reference before performing its stage:
 | Evidence collection, status, freshness, and confidence | [references/evidence-policy.md](references/evidence-policy.md) |
 | Evidence representation and Evidence ID boundary | [product_research/evidence.py](product_research/evidence.py) |
 | Multi-source consistency, source independence, conflict preservation, missing information, and claim-level Confidence | [product_research/evidence_assessment.py](product_research/evidence_assessment.py) |
+| Deterministic Unit Economics calculation and gate execution | [product_research/unit_economics.py](product_research/unit_economics.py) |
 | Eight-dimension scoring and thresholds | [references/scoring-policy.md](references/scoring-policy.md) |
 | Risk and Unit Economics gates | [references/gates.md](references/gates.md) |
 | Final output | [references/report-contract.md](references/report-contract.md) |
@@ -57,7 +58,7 @@ Do not skip an earlier stage merely because a later-stage answer appears intuiti
 
 ## Unimplemented Capabilities
 
-This phase provides orchestration, the shared structural Evidence representation, deterministic Evidence Policy validation, and deterministic Evidence Assessment with explicit per-record stances, independence groups, missing information, conflict preservation, and claim-level Confidence ceilings. Research adapters, marketplace or supplier scrapers, evidence persistence, scoring/calculation engines, VOC clustering, risk scanning, Red Team automation, and report-generation code do not exist yet.
+This phase provides orchestration, the shared structural Evidence representation, deterministic Evidence Policy validation, deterministic Evidence Assessment with explicit per-record stances, independence groups, missing information, conflict preservation, and claim-level Confidence ceilings, and deterministic Unit Economics calculation from explicit normalized inputs with caller-supplied thresholds and fail-closed gate results. Research adapters, marketplace or supplier scrapers, evidence normalization/acquisition, scoring engines, VOC clustering, risk scanning, Red Team automation, persistence, and report-generation code do not exist yet.
 
 Use only tools actually available in the current environment. Never claim to have accessed a source, collected data, run a calculation, or completed a workflow stage when that capability was unavailable. In that case:
 

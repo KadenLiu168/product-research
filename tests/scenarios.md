@@ -11,7 +11,7 @@ Run each input twice in a fresh Agent context:
 1. **RED / Baseline:** do not expose or load `product-research`.
 2. **GREEN:** explicitly load `product-research/SKILL.md` and follow its reference-routing instructions.
 
-Do not grant Research Adapters, scrapers, calculators, scoring engines, or other unimplemented capabilities. A response passes by describing the correct next actions and limitations; it must not pretend that research or calculation occurred.
+Do not grant Research Adapters, scrapers, scoring engines, or other unimplemented capabilities. A response passes by describing the correct next actions and limitations; it must not pretend that research or calculation occurred.
 
 For each run, record observable behavior against the rubric as `PASS` or `FAIL`, then include a concise output excerpt or faithful behavior summary. Do not score product viability.
 
@@ -117,7 +117,7 @@ Without the Skill, the Agent used plausible general knowledge but lacked the req
 
 ## GREEN Results
 
-Executed on 2026-08-13 in three fresh, read-only `codex exec --ephemeral --ignore-user-config` sessions. Each Agent was given the Skill path and the original scenario input, and was told only the actual Phase 2 capability boundary. Each Agent independently read `SKILL.md` and all five routed references.
+Executed on 2026-08-13 in three fresh, read-only `codex exec --ephemeral --ignore-user-config` sessions. Each Agent was given the Skill path and the original scenario input, and was told only the actual Phase 2 capability boundary. Each Agent independently read `SKILL.md` and all five routed references. The quoted excerpts below are historical records of that run date, before the deterministic Unit Economics calculator was implemented; current calculator routing is stated in the Unit Economics Acceptance Scenarios section.
 
 ### Scenario 1 — PASS (6/6)
 
@@ -355,3 +355,71 @@ These are the acceptance scenarios for the `evidence-confidence-conflict` capabi
 
 - **WHEN** the same input violates more than one Confidence ceiling
 - **THEN** the emitted factor sequence follows one fixed priority with duplicates removed and the strictest ceiling wins
+
+## Unit Economics Acceptance Scenarios
+
+These are the acceptance scenarios for the `unit-economics-engine` capability. They state the observable contract shared by `product_research/unit_economics.py` and the focused unit tests in `tests/test_unit_economics.py`. Evaluation is deterministic, dependency-free, and fail closed: it never treats missing information as zero, never applies a hidden threshold or default, and never emits a score, Risk outcome, or final decision label.
+
+### Fixed explicit inputs
+
+- **WHEN** the eight required inputs are supplied as finite `Decimal` amounts with explicit currency, status, Confidence, and Evidence IDs
+- **THEN** evaluation calculates Contribution Profit as Selling Price minus the seven ordered costs and Contribution Margin as that profit divided by Selling Price
+
+- **WHEN** Selling Price is `100` and the seven ordered costs are `20`, `10`, `5`, `3`, `2`, `15`, and `5` in one currency
+- **THEN** Contribution Profit is `40` and Contribution Margin is the fractional `0.4`
+
+### Missing versus zero
+
+- **WHEN** a business-not-applicable cost is supplied as a concrete `Decimal` zero
+- **THEN** the explicit zero participates in calculation
+
+- **WHEN** any one of the eight required fields is omitted or malformed
+- **THEN** evaluation fails closed with `ECONOMICS_INPUT_ERROR` without fabricating a zero for the missing field
+
+### Unknown propagation
+
+- **WHEN** any required input is `Unknown`
+- **THEN** no Contribution Profit or Contribution Margin is calculated, every dependent conclusion is `UNRESOLVED`, and no `Unknown` field is converted to zero
+
+### Currency mismatch
+
+- **WHEN** two concrete inputs carry different currency codes
+- **THEN** evaluation fails closed with `CURRENCY_MISMATCH` and performs no conversion
+
+### Explicit policy
+
+- **WHEN** Minimum Viability or Dynamic Target thresholds are not supplied
+- **THEN** the corresponding gate is `UNRESOLVED` with its policy-missing reason and no default is substituted
+
+- **WHEN** Dynamic Target is below Minimum Viability
+- **THEN** both gates and the economics outcome are `UNRESOLVED` with `INVALID_POLICY`
+
+### Independent gates
+
+- **WHEN** a calculated margin is above Minimum Viability but below Dynamic Target
+- **THEN** Minimum Viability is `PASS` and Dynamic Target is `FAIL`, each preserving its own actual and threshold
+
+### Combined outcomes
+
+- **WHEN** complete evaluations respectively produce Minimum `FAIL`, Minimum `PASS` plus Dynamic `FAIL`, and both `PASS`
+- **THEN** the economics outcomes are respectively `UNVIABLE`, `BELOW_TARGET`, and `MEETS_TARGET`
+
+### Deterministic ordering
+
+- **WHEN** equivalent inputs, Evidence-ID orders, or container orders are supplied repeatedly
+- **THEN** every result contains identically ordered unresolved inputs, reasons, and Evidence IDs
+
+### Decimal-context independence
+
+- **WHEN** identical inputs and policy are evaluated under different process-global Decimal precision and rounding settings
+- **THEN** Contribution Profit, Contribution Margin, gate results, and the economics outcome are identical
+
+### Purity
+
+- **WHEN** the capability is evaluated
+- **THEN** it reads no clock, network, random source, global Decimal context, or hidden configuration and imports no third-party, Evidence Policy, or Evidence Assessment dependency
+
+### ECO-12 boundary
+
+- **WHEN** both gates pass
+- **THEN** the capability returns `MEETS_TARGET` and traceable economics data without emitting a score, Risk outcome, or `GO` / `NO-GO` style final decision label
