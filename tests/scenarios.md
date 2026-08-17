@@ -438,6 +438,28 @@ These scenarios cover the explicit, read-only Market Demand boundary in `product
 - **WHEN** Market Demand analysis completes
 - **THEN** it contains no numeric score, recommendation, provider access, acquisition, or alternate Evidence representation; missing or malformed inputs fail closed as structured `Unknown`
 
+## Competition Analysis Acceptance Scenarios
+
+These scenarios cover the explicit, read-only Competition boundary in `product_research/competition.py` and its focused tests in `tests/test_competition.py`. They do not grant provider-backed competitor discovery, acquisition, or numeric score generation.
+
+- **WHEN** callers provide immutable competitor samples with exact identities, tags, opaque price-band labels, and existing Evidence IDs
+- **THEN** the boundary preserves those declarations, validates every cited Evidence ID through existing Policy, and never infers sample meaning from Evidence metadata
+
+- **WHEN** valid samples cover `HEAD`, `MIDDLE`, `NEW_ENTRANT`, and at least two explicit price bands
+- **THEN** the result reports deterministic coverage and `ADEQUATE` only at or above the 10-sample target
+
+- **WHEN** a sample has a duplicate identity or policy-rejected support
+- **THEN** every duplicate occurrence or rejected sample is retained with diagnostics but contributes nothing to valid count, strata, or price-band coverage
+
+- **WHEN** callers provide Positioning, Differentiation, or Market Structure propositions
+- **THEN** each proposition invokes the existing Evidence Assessment independently and preserves supported, adverse, excluded, missing-information, and Confidence details
+
+- **WHEN** Evidence or Competition inputs are malformed, incomplete, unresolved, or conflicted
+- **THEN** the narrowest safe result is `UNKNOWN` with stable diagnostics and no fabricated competitor, Evidence, score, or recommendation
+
+- **WHEN** equivalent Evidence-index and caller collection orders are permuted
+- **THEN** frozen Competition results replay equivalently with fixed tag, dimension, limitation, factor, identity, price-band, and Evidence-ID ordering
+
 ## Unit Economics Acceptance Scenarios
 
 These are the acceptance scenarios for the `unit-economics-engine` capability. They state the observable contract shared by `product_research/unit_economics.py` and the focused unit tests in `tests/test_unit_economics.py`. Evaluation is deterministic, dependency-free, and fail closed: it never treats missing information as zero, never applies a hidden threshold or default, and never emits a score, Risk outcome, or final decision label.

@@ -44,6 +44,8 @@ Assess whether a new seller can reasonably enter, not merely how many listings e
 
 Use a stratified sample of 10–15 valid competitors where available: leaders, mid-tier products, new entrants, low-review products, multiple price bands, claims, and positioning. Do not sample only bestsellers. If fewer than 10 meaningful competitors exist, use all valid samples and flag `Sample Size Limitation`.
 
+The current executable boundary is `product_research/competition.py`. It consumes existing normalized Evidence plus caller-declared competitor samples and material propositions, reuses the existing Policy and Assessment results, reports deterministic sample coverage and independent findings, and does not acquire data or generate a numeric score. The module is the normative source for this behavior; the sampling examples above remain methodology guidance.
+
 ## VOC and Differentiation
 
 Use multiple consumer sources where practical. Structure findings as purchase motivation, pain points, frequent complaints, unmet needs, use cases, purchase barriers, customer language, and audience segments. Distinguish common, edge-case, product-specific, and category-wide complaints. Use VOC evidence to evaluate differentiation, brand, and content potential.
