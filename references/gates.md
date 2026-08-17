@@ -2,6 +2,8 @@
 
 Run `Risk Gate` and `Unit Economics Gate` independently of the weighted score. Aggregate scoring cannot override either gate.
 
+The deterministic decision boundary consumes only explicit upstream results: `product_research/scoring_decision.py` accepts one `RiskGateState` (`CLEAR`, `REVIEW_REQUIRED`, or `FATAL`) and an existing `UnitEconomicsResult`. It does not perform either research or calculation stage again.
+
 ## Risk Gate
 
 Evaluate current authoritative evidence for applicable safety, product liability, customs, intellectual property, patent, trademark, certification, restricted-material, dangerous-goods, transport, and category-specific requirements. Children's products, batteries, liquids, food, cosmetics, medical claims, and similar categories require early gate attention.
@@ -21,6 +23,8 @@ Result: `RISK REVIEW` until current authoritative evidence resolves the issue.
 ### Normal Risk
 
 Non-critical risks proceed into ordinary analysis and the Risk & Compliance dimension. Do not label a risk fatal merely because evidence is missing; preserve the uncertainty and use `RISK REVIEW` when it is material.
+
+The scoring decision executor receives the resulting decision-facing state directly. Missing or malformed state is fail-closed as `RISK REVIEW`; it does not inspect Evidence text or infer a state from scores.
 
 ## Unit Economics Gate
 
@@ -48,3 +52,4 @@ Use `基础生存线 + 动态目标值`:
 
 No concrete margin threshold is frozen in this phase. Do not invent one. Deterministic Unit Economics execution is implemented in [product_research/unit_economics.py](../product_research/unit_economics.py): supply the eight normalized inputs and an explicit policy with caller-supplied `minimum_viability_margin` and `dynamic_target_margin` to `evaluate_unit_economics`. If critical inputs or a frozen threshold are unavailable, state the gap, keep affected values `Unknown`, and withhold a definitive Unit Economics Gate pass. The module owns the exact arithmetic, Decimal, validation, and threshold-execution behavior; do not restate it here.
 
+After that stage, pass the complete immutable `UnitEconomicsResult` to [product_research/scoring_decision.py](../product_research/scoring_decision.py). The scoring executor reads only its existing `EconomicsOutcome` and retains the result; it does not recalculate margins, rerun either economics gate, or generate economics thresholds.

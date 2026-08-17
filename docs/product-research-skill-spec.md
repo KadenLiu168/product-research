@@ -18,6 +18,8 @@ The core principle is:
 
 > No evidence, no conclusion.
 
+This document describes the broader v1 target workflow. The current deterministic scoring boundary is limited to explicit normalized inputs: `product_research/scoring_decision.py` executes the frozen eight-dimension weights, core thresholds, upstream gate precedence, and explicit analytical decision policy. It does not implement research acquisition, qualitative score generation, Red Team review, reporting, or end-to-end orchestration.
+
 All material conclusions must be supported by verifiable evidence. If evidence is insufficient, stale, conflicting, or estimated, the Skill must say so explicitly rather than filling gaps with unsupported assumptions.
 
 ---
@@ -30,11 +32,11 @@ The Skill evaluates a candidate product across the following eight dimensions:
 
 1. Market Demand
 2. Competition
-3. Pricing & Profitability
-4. Customer Pain Points & Differentiation
+3. Price & Profitability
+4. Pain Points & Differentiation
 5. Supply Chain & Fulfillment
 6. Brand Potential
-7. Content & Social Distribution Potential
+7. Content Potential
 8. Risk & Compliance
 
 It also includes:
@@ -722,14 +724,16 @@ Risk Gate always takes precedence over aggregate score.
 
 # 19. Eight-Dimension Scoring Model
 
+For normalized score inputs, execution belongs to `product_research/scoring_decision.py`. The module accepts exactly the eight fixed dimensions below in policy order and preserves missing scores as unresolved; evidence-backed qualitative score generation remains an upstream analysis responsibility.
+
 The base weighting model is:
 
 | Dimension | Base Weight |
 |---|---:|
 | Market Demand | 20% |
 | Competition | 15% |
-| Pricing & Profitability | 20% |
-| Customer Pain Points & Differentiation | 15% |
+| Price & Profitability | 20% |
+| Pain Points & Differentiation | 15% |
 | Supply Chain & Fulfillment | 10% |
 | Brand Potential | 8% |
 | Content Potential | 7% |
@@ -774,11 +778,13 @@ Final weights must always total:
 
 Any weight adjustment must include an explicit justification.
 
-The Skill must not adjust weights merely to produce a preferred outcome.
+The Skill must not adjust weights merely to produce a preferred outcome. The deterministic executor receives a complete caller-owned adjustment vector, including explicit zero values, validates the `±5` bounds and exact `100%` total, and does not select or justify adjustments.
 
 ---
 
 # 21. Quantitative vs LLM Scoring
+
+The executor performs only the deterministic execution of already normalized scores. It does not call an LLM, generate qualitative scores, or infer scores from Evidence.
 
 Use a hybrid model.
 
@@ -839,17 +845,19 @@ Minimum thresholds:
 | Core Dimension | Minimum Score |
 |---|---:|
 | Market Demand | 60 |
-| Pricing & Profitability | 60 |
-| Customer Pain Points & Differentiation | 55 |
+| Price & Profitability | 60 |
+| Pain Points & Differentiation | 55 |
 | Competition | 45 |
 
-If a core dimension fails its threshold, the Skill must explicitly surface the weakness even if the weighted score is high.
+If a core dimension fails its threshold, the Skill must explicitly surface the weakness even if the weighted score is high. In the current executor, a failed or unresolved core result constrains the analytical label to at most `CONDITIONAL GO`; no score-based severe-failure `NO-GO` threshold is defined.
 
 A severe core-dimension failure should prevent an unqualified positive conclusion.
 
 ---
 
 # 23. Final Decision Labels
+
+The deterministic executor requires an explicit aggregate GO threshold; it has no default. Its precedence is `NO-GO` for fatal Risk or `UNVIABLE` economics, then `RISK REVIEW` for review-required or malformed Risk, then `CONDITIONAL GO` for other unresolved or failed prerequisites, and `GO` only when every explicit prerequisite passes. The labels remain analytical classifications rather than autonomous commercial decisions.
 
 The Skill may use the following analytical labels:
 
@@ -876,7 +884,9 @@ A regulatory, IP, compliance, logistics, or similar risk requires further valida
 
 ## NO-GO
 
-Evidence indicates a fundamental problem such as:
+Within the deterministic executor, `NO-GO` is reserved for an explicit fatal Risk state or `UNVIABLE` Unit Economics outcome. Other fundamental problems such as severe demand weakness or competitive disadvantage must be established by the upstream analysis policy; the executor does not invent a score-based severe-failure threshold.
+
+Evidence may indicate a fundamental problem such as:
 
 - Fatal compliance risk
 - Clearly unsustainable economics
@@ -1240,6 +1250,8 @@ Uncertainty is part of the analysis rather than a failure of the analysis.
 ---
 
 # 38. v1 Success Criteria
+
+These are full-workflow target criteria, not a claim that the current repository can already perform every listed stage. The current scoring Change implements only the explicit deterministic scoring and analytical decision boundary described above; research acquisition, score generation, Red Team, reporting, and end-to-end evaluation remain unavailable.
 
 The v1 Skill is considered successful when it can take a candidate product and reliably:
 
