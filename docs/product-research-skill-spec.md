@@ -1251,7 +1251,7 @@ Uncertainty is part of the analysis rather than a failure of the analysis.
 
 # 38. v1 Success Criteria
 
-These are full-workflow target criteria, not a claim that the current repository can already perform every listed stage. The current repository implements the source-agnostic orchestration control plane, fixed family-level adapter composition, and the explicit deterministic scoring and analytical decision boundaries described above; provider-backed research acquisition, score generation, Red Team, reporting, and end-to-end evaluation remain unavailable.
+These are full-workflow target criteria, not a claim that the current repository can already perform every listed stage. The current repository implements the source-agnostic orchestration control plane, fixed family-level adapter composition, an explicit read-only Market Demand interpretation over existing normalized Evidence, and the explicit deterministic scoring and analytical decision boundaries described above; provider-backed research acquisition, score generation, Red Team, reporting, and end-to-end evaluation remain unavailable.
 
 The v1 Skill is considered successful when it can take a candidate product and reliably:
 

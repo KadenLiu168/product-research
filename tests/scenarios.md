@@ -404,6 +404,40 @@ These are the acceptance scenarios for the `evidence-confidence-conflict` capabi
 - **WHEN** the same input violates more than one Confidence ceiling
 - **THEN** the emitted factor sequence follows one fixed priority with duplicates removed and the strictest ceiling wins
 
+## Market Demand Analysis Acceptance Scenarios
+
+These scenarios cover the explicit, read-only Market Demand boundary in `product_research/market_demand.py`. They do not grant provider-backed research, scraping, or score generation.
+
+### Explicit categories and confirmation
+
+- **WHEN** existing normalized Evidence is explicitly bound to `SEARCH`, `COMMERCE`, or `SOCIAL`
+- **THEN** the analysis preserves those caller-declared categories and never infers them from provenance, source text, or record order
+
+- **WHEN** usable support covers any two distinct demand categories and the qualifying Evidence belongs to two distinct known independence groups
+- **THEN** the result is `POSITIVE` with fixed category and Evidence-ID ordering
+
+- **WHEN** usable support covers only one category, duplicates an ID/category, or lacks a distinct known cross-category pair
+- **THEN** the result is `UNKNOWN` with `Low` Confidence and no fabricated coverage
+
+### Policy, Assessment, and temporal ownership
+
+- **WHEN** Evidence is policy-excluded, unresolved, stale, status-ineligible, or claim-support-rejected
+- **THEN** it cannot satisfy category coverage, while the existing Policy and Assessment diagnostics remain nested and traceable
+
+- **WHEN** usable independent cross-category support unanimously declares `STABILITY_SUPPORT` or `SHORT_TERM_HYPE_SUPPORT`
+- **THEN** the temporal state is respectively `STABLE` or `SHORT_TERM_HYPE`
+
+- **WHEN** usable support declares `UNKNOWN` temporal meaning or mixes stability and short-term-hype interpretations
+- **THEN** temporal state remains `UNKNOWN` and no fallback is inferred
+
+### Traceability, determinism, and scope
+
+- **WHEN** callers permute equivalent Evidence-index, binding, relation, independence, and missing-information order
+- **THEN** the immutable result replays equivalently with lexical IDs, fixed category/factor order, and unchanged nested Assessment ordering
+
+- **WHEN** Market Demand analysis completes
+- **THEN** it contains no numeric score, recommendation, provider access, acquisition, or alternate Evidence representation; missing or malformed inputs fail closed as structured `Unknown`
+
 ## Unit Economics Acceptance Scenarios
 
 These are the acceptance scenarios for the `unit-economics-engine` capability. They state the observable contract shared by `product_research/unit_economics.py` and the focused unit tests in `tests/test_unit_economics.py`. Evaluation is deterministic, dependency-free, and fail closed: it never treats missing information as zero, never applies a hidden threshold or default, and never emits a score, Risk outcome, or final decision label.

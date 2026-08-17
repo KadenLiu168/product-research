@@ -36,6 +36,8 @@ Validate demand with multiple signals rather than a single proxy:
 
 A strong demand conclusion normally needs support from at least two of these three categories. Distinguish stable demand from short-term hype.
 
+The current executable boundary is `product_research/market_demand.py`. It consumes existing normalized Evidence and requires callers to bind each participating Evidence ID explicitly to one demand category and one temporal interpretation. It reuses the existing Policy and Assessment results, returns conservative traceability, and does not acquire data or generate a numeric score. The module is the normative source for this behavior; the examples above remain methodology guidance.
+
 ## Competition Structure
 
 Assess whether a new seller can reasonably enter, not merely how many listings exist. Examine meaningful competitor count, similarity and commoditization, seller/brand/review concentration, price-band and ad crowding, new-product visibility, positioning gaps, and how easily differentiation can be copied.
@@ -58,4 +60,3 @@ Assess supplier availability and concentration, sourcing range, MOQ, customizati
 ## Red Team
 
 After initial scoring, separately seek evidence that demand is overstated, commerce signals are weak, interest is hype, competition or incumbent concentration is understated, cost/CAC/returns are optimistic, VOC is biased, differentiation is copyable, or IP/compliance/liability risks are hidden. Objections require evidence. Revise scores or confidence only when warranted and identify what changed, why, and which evidence caused it.
-
