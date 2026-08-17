@@ -50,6 +50,8 @@ The current executable boundary is `product_research/competition.py`. It consume
 
 Use multiple consumer sources where practical. Structure findings as purchase motivation, pain points, frequent complaints, unmet needs, use cases, purchase barriers, customer language, and audience segments. Distinguish common, edge-case, product-specific, and category-wide complaints. Use VOC evidence to evaluate differentiation, brand, and content potential.
 
+The current executable boundary is `product_research/voc.py`. It consumes existing normalized Evidence plus caller-declared propositions, reuses the existing Policy and Assessment results, returns deterministic traceable findings and category coverage, and gates explicit Complaint prevalence and scope values by their declared supporting Evidence IDs. It does not acquire data, infer customer meaning, cluster text, generate scores, or run later Phase 6 analysis; those capabilities remain unavailable.
+
 ## Supply Chain and Fulfillment
 
 Assess supplier availability and concentration, sourcing range, MOQ, customization, manufacturing complexity, quality consistency, materials, weight, package volume, fragility, shipping restrictions, storage, returns, and after-sales burden. Exact unavailable values remain `Unknown`; bounded estimates require evidence and the `Estimated` status.

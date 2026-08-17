@@ -460,6 +460,28 @@ These scenarios cover the explicit, read-only Competition boundary in `product_r
 - **WHEN** equivalent Evidence-index and caller collection orders are permuted
 - **THEN** frozen Competition results replay equivalently with fixed tag, dimension, limitation, factor, identity, price-band, and Evidence-ID ordering
 
+## VOC Analysis Acceptance Scenarios
+
+These scenarios cover the explicit, read-only VOC boundary in `product_research/voc.py`. They do not grant provider-backed acquisition, automatic clustering, qualitative score generation, or later Phase 6 analysis.
+
+- **WHEN** callers provide explicit propositions in the eight closed categories
+- **THEN** each unique proposition is assessed independently through the existing Evidence Assessment and findings preserve the exact proposition, Confidence, supporting/adverse/excluded Evidence IDs, and nested Assessment
+
+- **WHEN** a category has supported findings, only Unknown findings, or no supplied proposition
+- **THEN** it appears respectively in fixed-order `supported_categories`, `unknown_categories`, or `missing_categories` without a fabricated finding
+
+- **WHEN** a Complaint proposition declares prevalence and scope values with separate Evidence-ID tuples
+- **THEN** each non-Unknown axis is preserved only when its IDs are policy-usable support for that proposition; unsupported axes remain `UNKNOWN`
+
+- **WHEN** Evidence, policy, assignments, or proposition keys are malformed, unresolved, conflicted, stale, or duplicated
+- **THEN** the narrowest safe result is `UNKNOWN` or `VOC_INPUT_ERROR`, duplicate keys have no winner, and no Evidence, proposition, classification, score, or recommendation is fabricated
+
+- **WHEN** equivalent Evidence-index, proposition, relation, independence, missing-information, or Complaint-axis orders are permuted
+- **THEN** the frozen VOC result replays equivalently with fixed category/factor and lexical Evidence-ID ordering
+
+- **WHEN** the VOC module is inspected
+- **THEN** it only consumes existing normalized Evidence and explicit inputs; provider acquisition, normalization, Evidence-ID allocation, clustering, scoring, downstream analysis, persistence, and reporting remain outside its ownership
+
 ## Unit Economics Acceptance Scenarios
 
 These are the acceptance scenarios for the `unit-economics-engine` capability. They state the observable contract shared by `product_research/unit_economics.py` and the focused unit tests in `tests/test_unit_economics.py`. Evaluation is deterministic, dependency-free, and fail closed: it never treats missing information as zero, never applies a hidden threshold or default, and never emits a score, Risk outcome, or final decision label.

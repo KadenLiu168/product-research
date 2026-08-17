@@ -505,6 +505,8 @@ Sample Size Limitation
 
 VOC should use multiple consumer evidence sources where practical.
 
+The current executable boundary is `product_research/voc.py`. It accepts only explicit propositions over existing normalized Evidence, reuses the existing Policy and Assessment contracts, and returns immutable, deterministic, traceable findings. It does not acquire or normalize provider data, infer categories or customer meaning, automatically cluster text, generate scores, or perform later Brand, Content, or other Phase 6 analysis.
+
 Potential sources include:
 
 - Amazon reviews
@@ -536,7 +538,7 @@ Whenever possible, the Skill should distinguish between:
 - Product-specific complaints
 - Category-wide complaints
 
-VOC findings must support later scoring for:
+Downstream scoring is a later capability. The current VOC boundary emits no numeric score and supplies traceable findings for later analysis when those capabilities become available:
 
 - Differentiation
 - Brand Potential
