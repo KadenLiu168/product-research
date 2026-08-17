@@ -1,0 +1,45 @@
+## 1. Establish the ECO-13 baseline and traceability map
+
+- [x] 1.1 Re-read all Change artifacts, the living Evidence data-model and policy specs, `product_research/evidence.py`, `product_research/evidence_policy.py`, current capability-routing statements, and `tests/scenarios.md`; map every `research-orchestration` requirement/scenario to focused tests before production edits.
+- [x] 1.2 Run the existing Evidence data-model, Evidence Policy, Evidence Assessment, Unit Economics, scoring-decision, and full `test_*.py` suites as a pre-change baseline; stop if an existing failure affects ECO-13 evidence.
+- [x] 1.3 Confirm the implementation allowlist is limited to `product_research/research_orchestration.py`, `tests/test_research_orchestration.py`, and only the narrow stale statements in `tests/scenarios.md`, `SKILL.md`, or `docs/product-research-skill-spec.md`; preserve unrelated work and do not modify existing Phase 3/4 modules, specs, package exports, configuration, or data.
+
+## 2. Write focused RED contracts first
+
+- [x] 2.1 Add failing tests for immutable `ResearchObjective`, `ResearchTask`, and `ResearchPlan` values; non-empty exact strings; existing `EvidenceKind` reuse; explicit boolean `required`; objective/plan identity matching; unique task IDs; and preservation of declared task order.
+- [x] 2.2 Add failing tests proving the planner is called exactly once, acquisition receives tasks sequentially in plan order, malformed/wrong planner output and duplicate/malformed task identities fail closed before acquisition, and no plan input is silently repaired or dropped.
+- [x] 2.3 Add failing tests for `RawFinding` validation with task-local identity, raw content, existing `Source`, explicit canonical observation time, defensively copied JSON metadata, no Evidence ID/schema fields, and duplicate/malformed finding identity rejection.
+- [x] 2.4 Add failing tests for `AcquisitionResult` task-identity matching, ordered finding tuples, exact adapter statuses `SUCCESS` / `UNAVAILABLE` / `FAILED`, valid zero-finding success, invalid `PARTIAL` adapter output, and inconsistent status/findings combinations.
+- [x] 2.5 Add failing all-success tests using fake planner/acquirer/normalizer callables; prove findings normalize only through the injected boundary into the existing concrete `Evidence` type and retain nested plan/finding order.
+- [x] 2.6 Add failing acquisition-state tests for unavailable and failed results, an ordinary acquisition exception, mismatched/malformed results, continued execution of later tasks, ordered closed failure reasons, no exception-derived fabricated Evidence, and propagation of programmer-control exceptions.
+- [x] 2.7 Add failing normalization tests for one ordinary normalizer exception, wrong output type, corrupted/malformed Evidence, mismatched allocated ID, partial preservation of unrelated successful findings, and failure detail tied to task/finding identity.
+- [x] 2.8 Add failing deterministic-ID tests for `E001` onward in plan/finding order, independence from finding-ID lexical order, position consumption before normalization, an `E002` normalization failure leaving later `E003` unchanged, and no clock/random/global-ID dependency.
+- [x] 2.9 Add failing task/run-result tests for task `SUCCESS` / `PARTIAL` / `UNAVAILABLE` / `FAILED`, ordered task and failure detail, all-acquisition-failed behavior, all-normalization-failed behavior, and a zero-finding successful plan yielding no fabricated Evidence.
+- [x] 2.10 Add failing coverage/status tests for ordered required, covered-required, missing-required, and failed-task IDs; partial normalization making a required task missing; optional failure not reducing required coverage; no Evidence producing run `FAILED`; useful missing-required work producing `PARTIAL`; and useful fully covered work producing `COMPLETE`.
+- [x] 2.11 Add a failing replay test proving equivalent objective, plan, fake acquisition outputs, and normalizer outputs produce an equivalent immutable `ResearchRunResult`, including IDs, task/finding outcomes, failures, coverage, and status.
+- [x] 2.12 Add a failing ownership audit proving the module has no concrete provider, network, scraping, HTTP, authentication, retry, caching, rate limiting, async, persistence, clock, randomness, LLM, Evidence Policy execution, Evidence Assessment, Unit Economics, scoring, Risk, Red Team, report, or decision-label behavior and defines no second durable Evidence schema.
+
+## 3. Implement the minimal orchestration kernel
+
+- [x] 3.1 Add only `product_research/research_orchestration.py` with strict immutable objective/task/plan/raw-finding/acquisition values, tuple normalization, JSON-compatible metadata copying, existing `Source`/`EvidenceKind` reuse, and no package-level export expansion.
+- [x] 3.2 Implement closed `TaskStatus`, `FailureReason`, and `RunStatus` values plus immutable `ResearchFailure`, `TaskResult`, and `ResearchRunResult` values that validate their internal identities, status combinations, ordering, and coverage invariants.
+- [x] 3.3 Implement `run_research(objective, planner, acquire, normalize)` with one planner call, defensive plan/result validation, sequential declared-order acquisition, task-local identity checks, ordinary-exception conversion, continued independent task execution, and no silent repair.
+- [x] 3.4 Implement run-local `E001`-onward allocation before each normalization call, exact existing-`Evidence` type/ID validation, public Evidence serialization round-trip validation, ordered preservation of successful values, deterministic gaps, and finding-level failure isolation.
+- [x] 3.5 Implement final task statuses, the four ordered coverage tuples, and fixed run precedence of no Evidence → `FAILED`, otherwise missing required coverage → `PARTIAL`, otherwise → `COMPLETE`; do not infer commercial sufficiency or create absence Evidence.
+- [x] 3.6 Make the focused suite GREEN, then simplify only code introduced by this Change; remove new unused helpers/imports and confirm every production line traces to a delta-spec requirement.
+
+## 4. Align capability routing narrowly
+
+- [x] 4.1 Update `tests/scenarios.md` only as needed with concise acceptance scenarios for research orchestration ordering, explicit failures, normalization, coverage, and non-analysis ownership; retain prior scenario history unchanged.
+- [x] 4.2 Update only stale statements in `SKILL.md` so research orchestration/acquisition normalization routes to `product_research/research_orchestration.py`, while concrete adapters, actual provider research, qualitative score generation, Risk scanning, Red Team, persistence, reports, and full end-to-end workflow remain unavailable.
+- [x] 4.3 Update only stale current-capability boundary text in `docs/product-research-skill-spec.md` if required; preserve its broader target workflow and do not claim ECO-14 adapters, commercial analysis, reporting, or autonomous execution exists.
+- [x] 4.4 Review the touched documentation together to ensure it describes RawFinding as non-durable, keeps existing Evidence as the sole normalized contract, and assigns ECO-14 adapters only the acquisition-result/raw-finding boundary.
+
+## 5. Verify focused, regression, and scope gates
+
+- [x] 5.1 Run `/usr/bin/python3 -m unittest discover -s tests -p 'test_research_orchestration.py' -v`; repeat the ordering/ID-gap, unavailable, acquisition-exception, normalization-failure, invalid-Evidence, malformed-identity, required-coverage, all-failed, and replay cases and trace every delta-spec scenario to fresh focused evidence.
+- [x] 5.2 Run `/usr/bin/python3 -m unittest discover -s tests -p 'test_evidence_data_model.py' -v`, `/usr/bin/python3 -m unittest discover -s tests -p 'test_evidence_policy.py' -v`, and `/usr/bin/python3 -m unittest discover -s tests -p 'test_evidence_assessment.py' -v` separately to prove Phase 3 contracts remain unchanged.
+- [x] 5.3 Run `/usr/bin/python3 -m unittest discover -s tests -p 'test_unit_economics.py' -v`, `/usr/bin/python3 -m unittest discover -s tests -p 'test_scoring_decision.py' -v`, and `/usr/bin/python3 -m unittest discover -s tests -p 'test_*.py' -v` to prove Phase 4 and repository-wide behavior remain green.
+- [x] 5.4 Run `openspec validate add-research-orchestration --strict`, `openspec validate --all --strict`, and `openspec doctor`; record that this repository has no supported `openspec verify` artifact/command rather than claiming such a gate passed.
+- [x] 5.5 Inspect the final diff and imports for provider-specific behavior, network/async/persistence/clock/random/LLM dependencies, a second Evidence schema, Evidence Policy or downstream-analysis execution, nondeterministic ordering, fabricated absence Evidence, hidden retries/defaults, adjacent refactors, package-export expansion, or unrelated changes.
+- [x] 5.6 Obtain an independent requirement-to-implementation-to-test acceptance review, resolve every in-scope finding, rerun affected focused and full gates, and leave archive, commit, push, Linear, and ECO-14 implementation untouched pending separate authorization.

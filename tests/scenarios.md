@@ -155,6 +155,34 @@ Representative excerpt:
 
 No scenario exposed a new documentation loophole. The minimal GREEN Skill and references were therefore retained without speculative additions. All three Agents also disclosed unavailable tooling instead of claiming that Research, scoring, Unit Economics, Red Team automation, or persistence had run.
 
+## Research Orchestration Acceptance Scenarios
+
+These scenarios cover the source-agnostic control-plane boundary in `product_research/research_orchestration.py` and its focused tests in `tests/test_research_orchestration.py`. `RawFinding` is non-durable, existing `Evidence` is the sole normalized contract, and future ECO-14 adapters stop at the acquisition-result/raw-finding boundary. They do not grant concrete provider adapters or external research capability.
+
+### Ordered planning and acquisition
+
+- **WHEN** a valid objective produces an ordered plan of valid tasks
+- **THEN** the planner is called once and the injected acquisition boundary receives tasks in declared order
+
+- **WHEN** the planner returns a malformed plan, duplicate task identity, or mismatched objective identity
+- **THEN** the run fails with `INVALID_PLAN` before acquisition and produces no Evidence
+
+### Explicit acquisition and normalization state
+
+- **WHEN** acquisition is unavailable, fails, raises an ordinary exception, or returns a mismatched result
+- **THEN** the task records an ordered closed failure reason, later independent tasks continue, and absence is not fabricated as Evidence
+
+- **WHEN** normalization returns valid existing `Evidence`, raises, returns the wrong type, returns malformed Evidence, or returns a mismatched ID
+- **THEN** only valid round-trippable Evidence is preserved; each finding failure remains tied to its task/finding identity and later findings keep their deterministic ID positions
+
+### Coverage and ownership
+
+- **WHEN** required and optional tasks produce complete, partial, unavailable, or failed outcomes
+- **THEN** required coverage, missing-required IDs, failed-task IDs, and `COMPLETE` / `PARTIAL` / `FAILED` run status follow the declared ordered outcomes
+
+- **WHEN** the orchestration run returns normalized Evidence
+- **THEN** it does not execute Evidence Policy, Evidence Assessment, Unit Economics, scoring, Risk, Red Team, reporting, persistence, or provider-specific acquisition
+
 ## Evidence Policy Validation Acceptance Scenarios
 
 These are the acceptance scenarios for the `evidence-policy-validation` capability. They state the observable contract shared by the validator and the focused unit tests in `tests/test_evidence_policy.py`. Validation is deterministic, read-only, and fail closed: it never mutates Evidence, fills missing metadata, upgrades a tier or status, guesses a source classification, or consults a system clock.
