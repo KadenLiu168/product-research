@@ -157,7 +157,7 @@ No scenario exposed a new documentation loophole. The minimal GREEN Skill and re
 
 ## Research Orchestration Acceptance Scenarios
 
-These scenarios cover the source-agnostic control-plane boundary in `product_research/research_orchestration.py` and its focused tests in `tests/test_research_orchestration.py`. `RawFinding` is non-durable, existing `Evidence` is the sole normalized contract, and future ECO-14 adapters stop at the acquisition-result/raw-finding boundary. They do not grant concrete provider adapters or external research capability.
+These scenarios cover the source-agnostic control-plane boundary in `product_research/research_orchestration.py` and its focused tests in `tests/test_research_orchestration.py`. `RawFinding` is non-durable, existing `Evidence` is the sole normalized contract, and the family-level composition stops at the acquisition-result/raw-finding boundary. They do not grant concrete provider adapters or external research capability.
 
 ### Ordered planning and acquisition
 
@@ -182,6 +182,26 @@ These scenarios cover the source-agnostic control-plane boundary in `product_res
 
 - **WHEN** the orchestration run returns normalized Evidence
 - **THEN** it does not execute Evidence Policy, Evidence Assessment, Unit Economics, scoring, Risk, Red Team, reporting, persistence, or provider-specific acquisition
+
+## Research Source Adapter Acceptance Scenarios
+
+These scenarios cover the fixed family-level composition in `product_research/research_adapters.py` and its focused tests in `tests/test_research_adapters.py`. The composition routes configured callables only; it does not provide concrete external research access.
+
+### Fixed family routing
+
+- **WHEN** valid tasks use `SEARCH`, `MARKETPLACE`, `CONSUMER_SOCIAL`, `SUPPLIER`, and `REGULATORY_IP`
+- **THEN** each task reaches only its matching configured slot exactly once, in caller-declared task order, with its original query intent and task object
+
+- **WHEN** a valid family has no configured slot
+- **THEN** the composition returns the same task identity with `UNAVAILABLE` and zero findings, and the orchestration creates no Evidence for that absence
+
+### Acquisition ownership
+
+- **WHEN** a configured callable returns a success, failure, zero-finding, malformed, or mismatched acquisition result, or raises an ordinary exception
+- **THEN** the composition returns or propagates it unchanged and the existing orchestration retains validation, failure classification, normalization, and Evidence ID ownership
+
+- **WHEN** the adapter module and current capability routing are inspected
+- **THEN** they expose family-level composition only; provider-backed acquisition, scrapers, network/browser access, credentials, retries, persistence, analysis, scoring, Risk, Red Team, reporting, and recommendations remain unavailable
 
 ## Evidence Policy Validation Acceptance Scenarios
 

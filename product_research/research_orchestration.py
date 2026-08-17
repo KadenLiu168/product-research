@@ -35,6 +35,10 @@ class RunStatus(_ConstrainedValue):
     _allowed = ("COMPLETE", "PARTIAL", "FAILED")
 
 
+class SourceFamily(_ConstrainedValue):
+    _allowed = ("SEARCH", "MARKETPLACE", "CONSUMER_SOCIAL", "SUPPLIER", "REGULATORY_IP")
+
+
 def _require_exact_string(value, field_name):
     _require_non_empty_string(value, field_name)
 
@@ -73,7 +77,9 @@ def _validate_task(value):
         raise TypeError("task must be a ResearchTask")
     _require_exact_string(value.task_id, "task_id")
     _require_exact_string(value.research_question, "research_question")
-    _require_exact_string(value.source_family, "source_family")
+    if type(value.source_family) is not SourceFamily:
+        raise TypeError("source_family must be a SourceFamily")
+    SourceFamily(value.source_family.value)
     _require_exact_string(value.query_intent, "query_intent")
     if type(value.evidence_kind) is not EvidenceKind:
         raise TypeError("evidence_kind must be an EvidenceKind")
@@ -155,7 +161,7 @@ class ResearchObjective:
 class ResearchTask:
     task_id: str
     research_question: str
-    source_family: str
+    source_family: SourceFamily
     query_intent: str
     evidence_kind: EvidenceKind
     required: bool

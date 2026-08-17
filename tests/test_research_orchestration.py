@@ -37,7 +37,7 @@ class ResearchOrchestrationTestBase(unittest.TestCase):
         return self.module.ResearchTask(
             task_id=task_id,
             research_question=f"What is known for {task_id}?",
-            source_family="first_party_marketplace",
+            source_family=self.module.SourceFamily("MARKETPLACE"),
             query_intent="listed_current_price",
             evidence_kind=self.policy.EvidenceKind(evidence_kind),
             required=required,
@@ -141,7 +141,7 @@ class ValueContractTests(ResearchOrchestrationTestBase):
             self.module.ResearchTask(
                 task_id="task-01",
                 research_question="",
-                source_family="source",
+                source_family=self.module.SourceFamily("SEARCH"),
                 query_intent="intent",
                 evidence_kind=self.policy.EvidenceKind("market"),
                 required=True,
@@ -157,7 +157,7 @@ class ValueContractTests(ResearchOrchestrationTestBase):
             self.module.ResearchTask(
                 task_id="task-01",
                 research_question="question",
-                source_family="source",
+                source_family=self.module.SourceFamily("SEARCH"),
                 query_intent="intent",
                 evidence_kind="market",
                 required=True,
@@ -728,6 +728,82 @@ class OwnershipAuditTests(ResearchOrchestrationTestBase):
         }
         self.assertIn("Evidence", imported_names)
         self.assertIn("EvidenceKind", imported_names)
+
+
+class SourceFamilyTests(ResearchOrchestrationTestBase):
+    def source_family_task(self, source_family, query_intent="caller-defined intent"):
+        return self.module.ResearchTask(
+            task_id="task-01",
+            research_question="Which source family can answer this?",
+            source_family=source_family,
+            query_intent=query_intent,
+            evidence_kind=self.policy.EvidenceKind("marketplace_price"),
+            required=True,
+        )
+
+    def test_source_family_accepts_only_the_exact_closed_vocabulary(self):
+        expected = ("SEARCH", "MARKETPLACE", "CONSUMER_SOCIAL", "SUPPLIER", "REGULATORY_IP")
+        actual = tuple(self.module.SourceFamily(value).value for value in expected)
+        self.assertEqual(actual, expected)
+        for value in ("search", "", "OTHER", None, 1):
+            with self.subTest(value=value), self.assertRaises((TypeError, ValueError)):
+                self.module.SourceFamily(value)
+        family = self.module.SourceFamily("SEARCH")
+        with self.assertRaises(AttributeError):
+            family._value = "MARKETPLACE"
+
+    def test_research_task_and_plan_require_exact_source_family_values(self):
+        with self.assertRaises((TypeError, ValueError)):
+            self.source_family_task("SEARCH")
+
+        corrupted = object.__new__(self.module.ResearchTask)
+        for name, value in (
+            ("task_id", "task-01"),
+            ("research_question", "question"),
+            ("source_family", "SEARCH"),
+            ("query_intent", "intent"),
+            ("evidence_kind", self.policy.EvidenceKind("marketplace_price")),
+            ("required", True),
+        ):
+            object.__setattr__(corrupted, name, value)
+        malformed_plan = self.corrupt_plan("objective-01", [corrupted])
+        acquired = []
+        result = self.module.run_research(
+            self.objective(), lambda _: malformed_plan, lambda task: acquired.append(task), lambda *_: None
+        )
+        self.assertEqual([str(failure.reason) for failure in result.failures], ["INVALID_PLAN"])
+        self.assertEqual(acquired, [])
+
+    def test_plan_rejects_corrupted_exact_source_family_before_acquisition(self):
+        corrupted_family = object.__new__(self.module.SourceFamily)
+        object.__setattr__(corrupted_family, "_value", "NOT_SUPPORTED")
+        corrupted_task = object.__new__(self.module.ResearchTask)
+        for name, value in (
+            ("task_id", "task-01"),
+            ("research_question", "question"),
+            ("source_family", corrupted_family),
+            ("query_intent", "intent"),
+            ("evidence_kind", self.policy.EvidenceKind("marketplace_price")),
+            ("required", True),
+        ):
+            object.__setattr__(corrupted_task, name, value)
+        malformed_plan = self.corrupt_plan("objective-01", [corrupted_task])
+        acquired = []
+
+        result = self.module.run_research(
+            self.objective(), lambda _: malformed_plan, lambda task: acquired.append(task), lambda *_: None
+        )
+
+        self.assertEqual([str(failure.reason) for failure in result.failures], ["INVALID_PLAN"])
+        self.assertEqual(acquired, [])
+
+    def test_valid_source_family_and_query_intent_are_preserved_without_taxonomy(self):
+        for value in ("SEARCH", "MARKETPLACE", "CONSUMER_SOCIAL", "SUPPLIER", "REGULATORY_IP"):
+            with self.subTest(value=value):
+                family = self.module.SourceFamily(value)
+                task = self.source_family_task(family, query_intent="  caller intent / v9  ")
+                self.assertEqual(task.source_family, family)
+                self.assertEqual(task.query_intent, "  caller intent / v9  ")
 
 
 if __name__ == "__main__":
