@@ -482,6 +482,28 @@ These scenarios cover the explicit, read-only VOC boundary in `product_research/
 - **WHEN** the VOC module is inspected
 - **THEN** it only consumes existing normalized Evidence and explicit inputs; provider acquisition, normalization, Evidence-ID allocation, clustering, scoring, downstream analysis, persistence, and reporting remain outside its ownership
 
+## Supply Chain Analysis Acceptance Scenarios
+
+These scenarios cover the explicit, read-only Supply Chain boundary in `product_research/supply_chain.py` and its focused tests in `tests/test_supply_chain.py`. They do not grant supplier acquisition, automatic extraction, economic calculation, scoring, recommendation, or regulatory Risk classification.
+
+- **WHEN** callers provide explicit propositions for `SUPPLIER_LANDSCAPE`, `MOQ`, `SOURCING_COST`, `CUSTOMIZATION`, `QUALITY`, `WEIGHT_VOLUME`, `TRANSPORTATION`, or `RETURNS_AFTER_SALES`
+- **THEN** each unique proposition is independently assessed over caller-declared Evidence IDs, relations, independence, missing information, and `AssessmentContext`, preserving the exact proposition and complete nested Assessment
+
+- **WHEN** a proposition has usable supported Evidence and no material or critical missing-information factor
+- **THEN** its finding is `SUPPORTED` with the unchanged Assessment Confidence and lexical supporting Evidence IDs; conflicts, stale/rejected/unresolved support, incomplete assignments, and input errors remain `UNKNOWN` with `Low` Confidence
+
+- **WHEN** equivalent Evidence-index, proposition, relation, independence, and missing-information orders are permuted
+- **THEN** immutable results replay equivalently with fixed dimension/factor order and lexical Evidence-ID traceability, while existing supplier-quotation freshness remains owned by Evidence Policy
+
+- **WHEN** an exact `(dimension, proposition)` key occurs more than once
+- **THEN** every occurrence receives zero Assessment calls and no finding, the duplicate key is reported once, and no first-wins, last-wins, merge, or semantic paraphrase behavior selects support
+
+- **WHEN** no proposition is supplied for a dimension, or a dimension is supplied only by unsupported propositions
+- **THEN** coverage reports that dimension as `missing` or `Unknown` respectively without fabricating a proposition, Evidence value, Assessment, estimate, score, or decision
+
+- **WHEN** the Supply Chain module is inspected
+- **THEN** it consumes only existing normalized Evidence and explicit inputs; provider/API/browser acquisition, extraction/clustering, Evidence-ID allocation, Unit Economics, FX, scoring, downstream decisions, regulatory dangerous-goods/certification/legal-restriction classification, persistence, and reporting remain outside its ownership
+
 ## Unit Economics Acceptance Scenarios
 
 These are the acceptance scenarios for the `unit-economics-engine` capability. They state the observable contract shared by `product_research/unit_economics.py` and the focused unit tests in `tests/test_unit_economics.py`. Evaluation is deterministic, dependency-free, and fail closed: it never treats missing information as zero, never applies a hidden threshold or default, and never emits a score, Risk outcome, or final decision label.

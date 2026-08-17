@@ -18,7 +18,7 @@ The core principle is:
 
 > No evidence, no conclusion.
 
-This document describes the broader v1 target workflow. Current deterministic boundaries include the source-agnostic `product_research/research_orchestration.py` control plane for explicit plans, injected acquisition, raw-finding normalization, and execution coverage, the fixed five-family `product_research/research_adapters.py` composition for configured acquisition callables, the explicit read-only `product_research/competition.py` boundary for caller-declared competitor samples and propositions over existing Evidence, and the explicit normalized-input scoring boundary: `product_research/scoring_decision.py` executes the frozen eight-dimension weights, core thresholds, upstream gate precedence, and explicit analytical decision policy. `RawFinding` is non-durable, existing `Evidence` is the sole normalized contract, and family composition stops at the acquisition-result/raw-finding boundary. The repository still does not implement provider-backed research acquisition, qualitative score generation, Red Team review, reporting, or the full end-to-end workflow.
+This document describes the broader v1 target workflow. Current deterministic boundaries include the source-agnostic `product_research/research_orchestration.py` control plane for explicit plans, injected acquisition, raw-finding normalization, and execution coverage, the fixed five-family `product_research/research_adapters.py` composition for configured acquisition callables, the explicit read-only `product_research/competition.py` and `product_research/supply_chain.py` boundaries for caller-declared inputs over existing Evidence, and the explicit normalized-input scoring boundary: `product_research/scoring_decision.py` executes the frozen eight-dimension weights, core thresholds, upstream gate precedence, and explicit analytical decision policy. `RawFinding` is non-durable, existing `Evidence` is the sole normalized contract, and family composition stops at the acquisition-result/raw-finding boundary. The repository still does not implement provider-backed research acquisition, qualitative score generation, Red Team review, reporting, or the full end-to-end workflow.
 
 All material conclusions must be supported by verifiable evidence. If evidence is insufficient, stale, conflicting, or estimated, the Skill must say so explicitly rather than filling gaps with unsupported assumptions.
 
@@ -568,7 +568,7 @@ Analyze:
 - Return complexity
 - After-sales complexity
 
-Where exact information is unavailable, reasonable estimates may be used if clearly marked as `Estimated`.
+The current executable boundary is `product_research/supply_chain.py`. It accepts only explicit non-empty propositions in the eight closed Supply Chain dimensions over existing normalized Evidence, invokes the existing Policy and Assessment boundaries independently per unique proposition, and returns immutable findings with deterministic coverage and Evidence-ID traceability. It does not infer supplier, numeric, stance, independence, or operational facts from Evidence text or provenance; it does not acquire, extract, cluster, calculate, score, recommend, or classify regulatory Risk. Unavailable information remains `UNKNOWN` rather than becoming zero or an `Estimated` value. The module is normative for this current boundary; the preceding analysis list remains target methodology.
 
 ---
 
@@ -1253,7 +1253,7 @@ Uncertainty is part of the analysis rather than a failure of the analysis.
 
 # 38. v1 Success Criteria
 
-These are full-workflow target criteria, not a claim that the current repository can already perform every listed stage. The current repository implements the source-agnostic orchestration control plane, fixed family-level adapter composition, explicit read-only Market Demand and Competition interpretations over existing normalized Evidence, and the explicit deterministic scoring and analytical decision boundaries described above; provider-backed research acquisition, score generation, Red Team, reporting, and end-to-end evaluation remain unavailable.
+These are full-workflow target criteria, not a claim that the current repository can already perform every listed stage. The current repository implements the source-agnostic orchestration control plane, fixed family-level adapter composition, explicit read-only Market Demand, Competition, VOC, and Supply Chain interpretations over existing normalized Evidence, and the explicit deterministic scoring and analytical decision boundaries described above; provider-backed research acquisition, score generation, Red Team, reporting, and end-to-end evaluation remain unavailable.
 
 The v1 Skill is considered successful when it can take a candidate product and reliably:
 

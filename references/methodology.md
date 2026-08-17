@@ -54,7 +54,7 @@ The current executable boundary is `product_research/voc.py`. It consumes existi
 
 ## Supply Chain and Fulfillment
 
-Assess supplier availability and concentration, sourcing range, MOQ, customization, manufacturing complexity, quality consistency, materials, weight, package volume, fragility, shipping restrictions, storage, returns, and after-sales burden. Exact unavailable values remain `Unknown`; bounded estimates require evidence and the `Estimated` status.
+Assess supplier availability and concentration, sourcing range, MOQ, customization, manufacturing complexity, quality consistency, materials, weight, package volume, fragility, shipping restrictions, storage, returns, and after-sales burden. The current executable boundary is `product_research/supply_chain.py`: it consumes existing normalized Evidence by caller-supplied `EvidenceId` together with explicit propositions in the eight closed dimensions, reuses the existing Policy and Assessment contracts, and returns immutable, deterministic, traceable findings and coverage. It does not acquire supplier data, infer meaning or numeric facts, calculate economics, generate scores or decisions, or classify regulatory Risk. Missing or unresolved inputs remain `UNKNOWN`; the boundary does not substitute an `Estimated` value. The module is the normative source for this behavior; the broader supply-chain methodology remains guidance for explicitly declared propositions.
 
 ## Brand and Content Potential
 
