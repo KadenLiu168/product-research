@@ -26,6 +26,8 @@ Non-critical risks proceed into ordinary analysis and the Risk & Compliance dime
 
 The scoring decision executor receives the resulting decision-facing state directly. Missing or malformed state is fail-closed as `RISK REVIEW`; it does not inspect Evidence text or infer a state from scores.
 
+The deterministic Risk analysis boundary is implemented in [product_research/risk_compliance.py](../product_research/risk_compliance.py): supply caller-declared Risk propositions over existing normalized Evidence plus the caller-owned required-area contract to `analyze_risk_compliance`. It reuses the Evidence Policy and Evidence Assessment boundaries, keeps original Evidence-ID traceability, treats unsupported propositions conservatively as `UNKNOWN`, and derives the decision-facing `RiskGateState` with fixed precedence: supported `FATAL`, then supported `REVIEWABLE`, then material or critical unresolved findings, unsafe inputs, or incomplete required coverage (`REVIEW_REQUIRED`), then `CLEAR`. Applicability stays caller-owned: Risk Areas absent from the required-area contract are not presumed to apply. The module does not acquire evidence, search regulations or IP registers, or infer legal conclusions, and it owns the exact aggregation behavior; do not restate it here.
+
 ## Unit Economics Gate
 
 Build the model from traceable inputs:

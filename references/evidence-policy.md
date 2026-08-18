@@ -38,6 +38,7 @@ Never convert `Estimated` or `Unknown` into `Observed`. User-provided facts take
 - VOC: prefer the most recent 12–24 months; older evidence may support persistent issues when dated.
 - Supply-chain quotations: prefer the most recent 3 months.
 - Regulation, certification, and tariffs: verify the currently effective authoritative version.
+- Official patent and trademark records: declare `metadata.policy.kind = ip_authoritative_record` with an official/authoritative Tier-1 registered source, an `effective_from` date (the record's caller-selected authoritative applicable start date, such as filing, publication, issue, or registration), and a bounded `verified_current_at` verification under the same authoritative current-version discipline as regulation. Policy acceptance establishes Evidence eligibility only; it never infers infringement, enforceability, expiration, or product applicability, and it never represents the record as a regulation.
 - Long-term industry data may be older, but state its year and continuing relevance.
 
 ## Cross-Validation and Conflict

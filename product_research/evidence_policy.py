@@ -58,6 +58,7 @@ class EvidenceKind(_ConstrainedValue):
         "regulation",
         "certification",
         "tariff",
+        "ip_authoritative_record",
         "long_term_industry",
     )
 
@@ -96,8 +97,13 @@ _STATUS_BY_CLAIM_MODE = {
 _DATED_KINDS = frozenset(
     EvidenceKind(kind) for kind in ("market", "competition", "marketplace_price", "supplier_quotation")
 )
+# Kinds that require an official/authoritative Tier-1 source plus bounded
+# current-version verification. ``ip_authoritative_record`` reuses this branch
+# for official patent and trademark records; ``effective_from`` is the
+# caller-selected authoritative applicable start date of the cited record and
+# implies no legal status or applicability conclusion.
 _REGULATORY_KINDS = frozenset(
-    EvidenceKind(kind) for kind in ("regulation", "certification", "tariff")
+    EvidenceKind(kind) for kind in ("regulation", "certification", "tariff", "ip_authoritative_record")
 )
 _VOC_KIND = EvidenceKind("voc")
 _LONG_TERM_INDUSTRY_KIND = EvidenceKind("long_term_industry")

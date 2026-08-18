@@ -136,14 +136,34 @@ class PolicyVocabularyContractTests(PolicyTestBase):
             "regulation",
             "certification",
             "tariff",
+            "ip_authoritative_record",
             "long_term_industry",
         ):
             with self.subTest(value=value):
                 self.assertEqual(str(self.policy.EvidenceKind(value)), value)
 
+    def test_evidence_kind_vocabulary_is_exact(self):
+        self.assertEqual(
+            self.policy.EvidenceKind._allowed,
+            (
+                "market",
+                "competition",
+                "marketplace_price",
+                "supplier_quotation",
+                "voc",
+                "regulation",
+                "certification",
+                "tariff",
+                "ip_authoritative_record",
+                "long_term_industry",
+            ),
+        )
+
     def test_evidence_kind_rejects_unknown_values(self):
-        with self.assertRaises((TypeError, ValueError)):
-            self.policy.EvidenceKind("mystery")
+        for invalid in ("mystery", "ip", "patent", "trademark", "regulation_ip", "IP_AUTHORITATIVE_RECORD"):
+            with self.subTest(invalid=invalid):
+                with self.assertRaises((TypeError, ValueError)):
+                    self.policy.EvidenceKind(invalid)
 
     def test_reason_codes_cover_the_contract(self):
         for value in (
@@ -1079,6 +1099,318 @@ class ValidateEvidenceRegulatoryTests(PolicyTestBase):
             [issue.reason_code for issue in result.issues],
             [self.policy.ReasonCode("TIER_MISMATCH")],
         )
+
+
+class ValidateEvidenceAuthoritativeRecordTests(PolicyTestBase):
+    def build_ip_record(self, **overrides):
+        values = {
+            "source": self.evidence.Source(
+                provider="Patent Office",
+                source_type="official_patent",
+                reference="https://patents.test/11-222-333",
+                title="Granted patent 11-222-333",
+            ),
+            "tier": self.evidence.Tier("Tier 1"),
+            "metadata": {
+                "policy": {
+                    "kind": "ip_authoritative_record",
+                    "effective_from": "2026-01-01",
+                    "verified_current_at": "2026-08-01T00:00:00Z",
+                }
+            },
+        }
+        values.update(overrides)
+        return self.build_evidence(**values)
+
+    def build_policy(self, **overrides):
+        values = {
+            "source_registry": {
+                ("Patent Office", "official_patent"): self.policy.SourceClass(
+                    "OFFICIAL_AUTHORITATIVE"
+                ),
+                ("Trademark Office", "official_trademark"): self.policy.SourceClass(
+                    "OFFICIAL_AUTHORITATIVE"
+                ),
+                ("Example Marketplace", "marketplace_listing"): self.policy.SourceClass(
+                    "FIRST_PARTY_MARKETPLACE_SUPPLIER"
+                ),
+            },
+            "max_current_verification_age": 365,
+        }
+        values.update(overrides)
+        return self.policy.EvidencePolicy(**values)
+
+    def validate(self, evidence=None, context=None, policy=None):
+        return self.policy.validate_evidence(
+            evidence or self.build_ip_record(),
+            context or self.build_context(),
+            policy or self.build_policy(),
+        )
+
+    def test_current_official_patent_record_accepted(self):
+        result = self.validate()
+
+        self.assertEqual(result.outcome, self.policy.Outcome("ACCEPT_CURRENT"))
+        self.assertTrue(result.fact_eligible)
+        self.assertEqual(result.issues, ())
+
+    def test_current_official_trademark_record_accepted_without_regulation_kind(self):
+        evidence = self.build_ip_record(
+            source=self.evidence.Source(
+                provider="Trademark Office",
+                source_type="official_trademark",
+                reference="https://trademarks.test/4-555-666",
+                title="Registered trademark 4-555-666",
+            ),
+            metadata={
+                "policy": {
+                    "kind": "ip_authoritative_record",
+                    "effective_from": "2025-06-01",
+                    "verified_current_at": "2026-08-01T00:00:00Z",
+                }
+            },
+        )
+        result = self.validate(evidence=evidence)
+
+        self.assertEqual(result.outcome, self.policy.Outcome("ACCEPT_CURRENT"))
+        self.assertTrue(result.fact_eligible)
+        self.assertEqual(evidence.metadata["policy"]["kind"], "ip_authoritative_record")
+
+    def test_ip_record_without_current_verification_rejected(self):
+        evidence = self.build_ip_record(
+            metadata={"policy": {"kind": "ip_authoritative_record", "effective_from": "2026-01-01"}}
+        )
+        result = self.validate(evidence=evidence)
+
+        self.assertEqual(result.outcome, self.policy.Outcome("REJECT"))
+        self.assertEqual(
+            [issue.reason_code for issue in result.issues],
+            [self.policy.ReasonCode("MISSING_FRESHNESS_METADATA")],
+        )
+
+    def test_ip_record_without_effective_date_rejected(self):
+        evidence = self.build_ip_record(
+            metadata={
+                "policy": {
+                    "kind": "ip_authoritative_record",
+                    "verified_current_at": "2026-08-01T00:00:00Z",
+                }
+            }
+        )
+        result = self.validate(evidence=evidence)
+
+        self.assertEqual(result.outcome, self.policy.Outcome("REJECT"))
+        self.assertEqual(
+            [issue.reason_code for issue in result.issues],
+            [self.policy.ReasonCode("MISSING_FRESHNESS_METADATA")],
+        )
+
+    def test_ip_record_with_expired_verification_rejected(self):
+        verified = (AS_OF - timedelta(days=400)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        evidence = self.build_ip_record(
+            metadata={
+                "policy": {
+                    "kind": "ip_authoritative_record",
+                    "effective_from": "2025-01-01",
+                    "verified_current_at": verified,
+                }
+            }
+        )
+        result = self.validate(evidence=evidence)
+
+        self.assertEqual(result.outcome, self.policy.Outcome("REJECT"))
+        self.assertEqual(
+            [issue.reason_code for issue in result.issues],
+            [self.policy.ReasonCode("STALE_EVIDENCE")],
+        )
+
+    def test_ip_record_verification_at_boundary_accepted(self):
+        verified = (AS_OF - timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        evidence = self.build_ip_record(
+            metadata={
+                "policy": {
+                    "kind": "ip_authoritative_record",
+                    "effective_from": "2025-01-01",
+                    "verified_current_at": verified,
+                }
+            }
+        )
+        result = self.validate(evidence=evidence)
+
+        self.assertEqual(result.outcome, self.policy.Outcome("ACCEPT_CURRENT"))
+        self.assertTrue(result.fact_eligible)
+
+    def test_ip_record_with_future_effective_date_rejected(self):
+        evidence = self.build_ip_record(
+            metadata={
+                "policy": {
+                    "kind": "ip_authoritative_record",
+                    "effective_from": "2026-08-16",
+                    "verified_current_at": "2026-08-15T00:00:00Z",
+                }
+            }
+        )
+        result = self.validate(evidence=evidence)
+
+        self.assertEqual(result.outcome, self.policy.Outcome("REJECT"))
+        self.assertEqual(
+            [issue.reason_code for issue in result.issues],
+            [self.policy.ReasonCode("INVALID_POLICY_METADATA")],
+        )
+
+    def test_ip_record_verified_after_as_of_rejected(self):
+        evidence = self.build_ip_record(
+            metadata={
+                "policy": {
+                    "kind": "ip_authoritative_record",
+                    "effective_from": "2026-01-01",
+                    "verified_current_at": "2026-08-16T00:00:00Z",
+                }
+            }
+        )
+        result = self.validate(evidence=evidence)
+
+        self.assertEqual(result.outcome, self.policy.Outcome("REJECT"))
+        self.assertEqual(
+            [issue.reason_code for issue in result.issues],
+            [self.policy.ReasonCode("INVALID_POLICY_METADATA")],
+        )
+
+    def test_ip_record_with_effective_date_after_verification_rejected(self):
+        evidence = self.build_ip_record(
+            metadata={
+                "policy": {
+                    "kind": "ip_authoritative_record",
+                    "effective_from": "2026-09-01",
+                    "verified_current_at": "2026-08-01T00:00:00Z",
+                }
+            }
+        )
+        result = self.validate(evidence=evidence)
+
+        self.assertEqual(result.outcome, self.policy.Outcome("REJECT"))
+        self.assertEqual(
+            [issue.reason_code for issue in result.issues],
+            [self.policy.ReasonCode("INVALID_POLICY_METADATA")],
+        )
+
+    def test_ip_record_with_malformed_metadata_rejected(self):
+        for policy_meta in (
+            {"kind": "ip_authoritative_record", "effective_from": "2026/01/01", "verified_current_at": "2026-08-01T00:00:00Z"},
+            {"kind": "ip_authoritative_record", "effective_from": "2026-01-01", "verified_current_at": "2026-08-01"},
+            {"kind": "ip_authoritative_record", "effective_from": "2026-01-01", "verified_current_at": "not-a-timestamp"},
+        ):
+            with self.subTest(policy_meta=policy_meta):
+                result = self.validate(evidence=self.build_ip_record(metadata={"policy": policy_meta}))
+
+                self.assertEqual(result.outcome, self.policy.Outcome("REJECT"))
+                self.assertEqual(
+                    [issue.reason_code for issue in result.issues],
+                    [self.policy.ReasonCode("INVALID_POLICY_METADATA")],
+                )
+
+    def test_ip_record_from_registered_non_authoritative_source_rejected(self):
+        evidence = self.build_ip_record(
+            source=self.evidence.Source(
+                provider="Example Marketplace",
+                source_type="marketplace_listing",
+                reference="https://example.test/patent-summary",
+                title="Marketplace patent summary",
+            ),
+            tier=self.evidence.Tier("Tier 2"),
+        )
+        result = self.validate(evidence=evidence)
+
+        self.assertEqual(result.outcome, self.policy.Outcome("REJECT"))
+        self.assertFalse(result.fact_eligible)
+        self.assertEqual(
+            [issue.reason_code for issue in result.issues],
+            [self.policy.ReasonCode("TIER_MISMATCH")],
+        )
+
+    def test_ip_record_from_official_source_with_wrong_tier_rejected(self):
+        result = self.validate(evidence=self.build_ip_record(tier=self.evidence.Tier("Tier 2")))
+
+        self.assertEqual(result.outcome, self.policy.Outcome("REJECT"))
+        self.assertEqual(
+            [issue.reason_code for issue in result.issues],
+            [self.policy.ReasonCode("TIER_MISMATCH")],
+        )
+
+    def test_ip_record_on_non_current_scope_has_no_verification_window(self):
+        verified = (AS_OF - timedelta(days=400)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        evidence = self.build_ip_record(
+            metadata={
+                "policy": {
+                    "kind": "ip_authoritative_record",
+                    "effective_from": "2025-01-01",
+                    "verified_current_at": verified,
+                }
+            }
+        )
+        result = self.validate(
+            evidence=evidence,
+            context=self.build_context(temporal_scope=self.policy.TemporalScope("HISTORICAL")),
+        )
+
+        self.assertEqual(result.outcome, self.policy.Outcome("ACCEPT_CURRENT"))
+        self.assertTrue(result.fact_eligible)
+
+    def test_ip_record_acceptance_infers_no_legal_conclusion(self):
+        result = self.validate()
+
+        self.assertEqual(result.outcome, self.policy.Outcome("ACCEPT_CURRENT"))
+        self.assertEqual(
+            [issue.message for issue in result.issues],
+            [],
+        )
+
+    def test_regulation_certification_and_tariff_behavior_is_unchanged(self):
+        for kind in ("regulation", "certification", "tariff"):
+            with self.subTest(kind=kind):
+                accepted = self.validate(
+                    evidence=self.build_ip_record(
+                        source=self.evidence.Source(
+                            provider="Patent Office",
+                            source_type="official_patent",
+                            reference="https://patents.test/regulation-like/1",
+                            title="Official record",
+                        ),
+                        metadata={
+                            "policy": {
+                                "kind": kind,
+                                "effective_from": "2026-01-01",
+                                "verified_current_at": "2026-08-01T00:00:00Z",
+                            }
+                        },
+                    )
+                )
+                stale = self.validate(
+                    evidence=self.build_ip_record(
+                        source=self.evidence.Source(
+                            provider="Patent Office",
+                            source_type="official_patent",
+                            reference="https://patents.test/regulation-like/2",
+                            title="Official record",
+                        ),
+                        metadata={
+                            "policy": {
+                                "kind": kind,
+                                "effective_from": "2025-01-01",
+                                "verified_current_at": (AS_OF - timedelta(days=400)).strftime(
+                                    "%Y-%m-%dT%H:%M:%SZ"
+                                ),
+                            }
+                        },
+                    )
+                )
+
+                self.assertEqual(accepted.outcome, self.policy.Outcome("ACCEPT_CURRENT"))
+                self.assertEqual(stale.outcome, self.policy.Outcome("REJECT"))
+                self.assertEqual(
+                    [issue.reason_code for issue in stale.issues],
+                    [self.policy.ReasonCode("STALE_EVIDENCE")],
+                )
 
 
 class ValidateEvidenceLongTermIndustryTests(PolicyTestBase):
