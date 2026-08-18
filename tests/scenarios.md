@@ -571,3 +571,37 @@ These are the acceptance scenarios for the `unit-economics-engine` capability. T
 
 - **WHEN** both gates pass
 - **THEN** the capability returns `MEETS_TARGET` and traceable economics data without emitting a score, Risk outcome, or `GO` / `NO-GO` style final decision label
+
+## Brand / Content Analysis Acceptance Scenarios
+
+These scenarios cover the explicit ECO-21 Brand Potential and Content Potential boundary in `product_research/brand_content.py`. The capability consumes caller-supplied normalized Evidence and fresh proposition-specific Assessment declarations; it does not acquire, infer, score, or decide.
+
+### Explicit propositions and independent Assessment
+
+- **WHEN** a caller supplies any explicit Brand / Content dimension with any of the five closed aspects and original Evidence IDs guided by VOC
+- **THEN** the proposition keeps the exact dimension, aspect, text, and Evidence traceability, and receives one independent existing Evidence Assessment
+
+- **WHEN** the same text is supplied under a different dimension or aspect
+- **THEN** the full `(dimension, aspect, proposition)` key remains distinct and no compatibility rule or semantic paraphrase merge is applied
+
+### Conservative findings and coverage
+
+- **WHEN** Assessment is `SUPPORTED` with non-empty policy-usable IDs
+- **THEN** the finding is `SUPPORTED` with the unchanged Assessment Confidence and exact usable IDs
+
+- **WHEN** Assessment is conflicted, insufficient, policy-rejected, stale, unresolved, malformed, or missing usable support
+- **THEN** the finding is `UNKNOWN` with Low Confidence and retains the complete Assessment diagnostics and declared adverse/excluded IDs
+
+- **WHEN** an aspect has a supported finding, only unsupported propositions, or no supplied proposition
+- **THEN** it appears exactly once in `supported_aspects`, `unknown_aspects`, or `missing_aspects` respectively, without a synthetic finding
+
+### Duplicate and ownership boundaries
+
+- **WHEN** an exact full proposition key occurs more than once
+- **THEN** every occurrence receives zero Assessment calls, no occurrence creates a finding, and the rejected key is reported once without winner selection or merge
+
+- **WHEN** the module is inspected for ownership
+- **THEN** it contains no acquisition, Evidence generation or ID allocation, text interpretation, NLP/LLM, numeric scoring, recommendation, Risk/Red Team, persistence, or reporting behavior
+
+- **WHEN** equivalent propositions, Evidence index entries, relations, independence assignments, and missing-information entries are reordered
+- **THEN** the result replays with equivalent ordered findings, coverage, duplicate keys, diagnostics, IDs, Confidence, and nested Assessments
