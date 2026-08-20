@@ -610,6 +610,49 @@ These scenarios cover the explicit Agent-to-deterministic Initial Scoring handof
 - **WHEN** Initial Scoring is invoked
 - **THEN** it emits only the existing eight-slot initial `DimensionScores`; score revision, aggregate/threshold/decision execution, reporting, persistence, provider research, and Red Team findings remain unavailable
 
+## Red Team Revision Acceptance Scenarios
+
+These scenarios cover the Agent-to-deterministic Phase 8 handoff. The Agent/caller owns adversarial reasoning, Evidence interpretation, and any upstream re-evaluation. `product_research.red_team_revision` owns only explicit current-run authorization, accepted state application, and immutable history.
+
+### Evidence-backed challenge without state change
+
+- **RED WHEN** the Agent submits a challenge with empty, baseline-only, undeclared, duplicate, or non-canonical causal Evidence IDs
+- **THEN** the deterministic boundary retains the initial scorecard and accepts no finding or revision from that malformed input
+- **GREEN WHEN** the Agent submits a non-empty finding with canonical IDs wholly in the declared Evidence universe and at least one current-run Red Team ID
+- **THEN** the finding is retained as informational and does not mutate any score or Gate
+
+### Challenge with no revision
+
+- **WHEN** the Agent submits a valid finding but the proposed score, Confidence, Risk Gate, and economics Gate/outcome are unchanged
+- **THEN** the finding remains recordable and no artificial score or Gate revision record is created
+
+### Valid score or Confidence revision
+
+- **RED WHEN** the Agent submits a score/Confidence change without current-run Evidence, with baseline-only Evidence, or with a revised concrete score not grounded by its own current-run Evidence IDs
+- **THEN** the target retains its initial `DimensionScore`
+- **GREEN WHEN** one independently validated proposal changes one existing dimension and cites canonical current-run Evidence
+- **THEN** only that dimension changes and the before/after score, reason, and causal IDs are preserved in deterministic dimension order
+
+### Current-run Evidence-only authorization
+
+- **WHEN** the same score and Confidence are submitted with different Evidence IDs
+- **THEN** the initial slot remains exactly unchanged; Evidence-only enrichment is not converted into a revision
+
+### Concrete-to-unresolved trace
+
+- **WHEN** adverse current-run Evidence invalidates a concrete conclusion and the Agent submits the canonical unresolved score
+- **THEN** the revised slot is exactly `score=None`, `Confidence=Low`, `Evidence IDs=()`, while the revision record retains the independent causal Evidence IDs
+
+### Authoritative Risk and economics re-evaluation
+
+- **WHEN** the Agent reruns the authoritative Risk or Unit Economics capability and submits complete before/after results
+- **THEN** Red Team compares only the retained Risk Gate, economics Gates, and `EconomicsOutcome`; it requires current-run causal Evidence and equal economics thresholds, and preserves complete before/after results without rerunning either capability
+
+### No unsupported mutation or orchestration
+
+- **WHEN** the caller supplies a raw `RiskGateState`, raw economics Gate/outcome, whole revised scorecard, or a request for objection generation, scoring, acquisition, persistence, or final labeling
+- **THEN** the deterministic Red Team boundary ignores the unsupported mutation and performs no provider/LLM/network, Evidence text interpretation, Initial Scoring, Risk/economics calculation, scoring-decision execution, reporting, or orchestration
+
 ## Brand / Content Analysis Acceptance Scenarios
 
 These scenarios cover the explicit ECO-21 Brand Potential and Content Potential boundary in `product_research/brand_content.py`. The capability consumes caller-supplied normalized Evidence and fresh proposition-specific Assessment declarations; it does not acquire, infer, score, or decide.

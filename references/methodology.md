@@ -82,3 +82,5 @@ The current executable boundary is `product_research/risk_compliance.py`. It con
 ## Red Team
 
 After initial scoring, separately seek evidence that demand is overstated, commerce signals are weak, interest is hype, competition or incumbent concentration is understated, cost/CAC/returns are optimistic, VOC is biased, differentiation is copyable, or IP/compliance/liability risks are hidden. Objections require evidence. Revise scores or confidence only when warranted and identify what changed, why, and which evidence caused it.
+
+The Agent/caller owns this adversarial reasoning and any upstream Risk or Unit Economics re-evaluation. Once those explicit normalized values exist, pass canonical baseline/current-run Evidence IDs, findings, per-dimension proposals, and complete authoritative before/after results to `product_research/red_team_revision.py`. The deterministic boundary validates current-run authorization, applies accepted changes, and preserves immutable history; it does not generate objections, interpret Evidence, rerun analysis, recalculate economics, or make the final decision.
