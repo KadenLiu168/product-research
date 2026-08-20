@@ -15,11 +15,12 @@ risk_compliance -> scoring_decision (only to obtain RiskGateState)
 - Move the canonical definition of `RiskGateState` to a neutral contract module (`risk_gate.py`)
 - Ensure `risk_compliance` depends only on the neutral contract
 - Ensure `scoring_decision` re-exports the identical class object for backward compatibility
-- Preserve all existing public contracts, vocabulary, immutable semantics, and test expectations
+- Preserve the supported public construction and value semantics and the existing `product_research.scoring_decision.RiskGateState` import path (canonical module ownership intentionally moves to `risk_gate`; reflection metadata such as `__module__` changes)
 
 **Non-Goals:**
 
 - Any vocabulary or behavior change to `RiskGateState`
+- Any `__module__` reassignment or other reflection / serialization compatibility hack
 - Creation of `shared_contracts.py` or other generalization modules
 - Modification of `scoring_decision.py` beyond the `RiskGateState` re-export (its own `_ClosedValue` base and other vocabularies stay in place)
 - Any change to `risk_compliance.py` except the import
@@ -35,7 +36,9 @@ risk_compliance -> scoring_decision (only to obtain RiskGateState)
 
 4. **No Enum** - Retained the existing immutable value-object pattern (private closed-vocabulary base with `_allowed`, not a `str` subclass and not an `Enum`) to avoid any API or behavior difference.
 
-5. **Spec ownership distribution** - The `risk-gate` capability owns the contract itself (canonical location, closed vocabulary, immutable value semantics). The re-export identity requirement lives in `scoring-decision-engine` (the capability owning `scoring_decision.py`'s public surface), and the import-direction requirement lives in `risk-compliance-analysis` (the capability owning `risk_compliance.py`), so each living spec records the obligation that governs its own module.
+5. **Spec ownership distribution** - The `risk-gate` capability owns the contract itself (canonical location, closed vocabulary, immutable value semantics, single production definition, producer/consumer interchangeability). The re-export identity requirement lives in `scoring-decision-engine` (the capability owning `scoring_decision.py`'s public surface), and the import-direction requirement lives in `risk-compliance-analysis` (the capability owning `risk_compliance.py`), so each living spec records the obligation that governs its own module.
+
+6. **Verification strategy** - Three layers of automated protection replace manual grep acceptance: (a) contract tests in `tests/test_risk_gate.py` pin the exact value semantics (vocabulary, typed construction failures, `.value`, `str`, `repr`, exact-type equality, hashing, full immutability) at the new canonical location; (b) a boundary regression feeds a real `analyze_risk_compliance` result's `risk_gate` directly into `evaluate_scoring_decision` to prove producer-to-consumer compatibility across `CLEAR` / `REVIEW_REQUIRED` / `FATAL` with unchanged precedence; (c) static architecture checks (AST) enforce that `risk_gate.py` imports no `product_research` module, that `risk_compliance.py` imports no `scoring_decision`, and that exactly one `RiskGateState` class definition exists in the production package.
 
 ## Risks / Trade-offs
 

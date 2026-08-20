@@ -1,6 +1,6 @@
 ## Why
 
-The domain-analysis module `risk_compliance.py` currently imports `RiskGateState` from the downstream decision engine (`scoring_decision.py`). This reverse dependency violates the architecture-boundary and dependency-direction rules in CLAUDE.md: `RiskGateState` is an upstream gate contract produced by Risk analysis and consumed by the decision engine, yet its canonical definition lives inside the decision module. Moving the definition to a neutral contract module restores the required dependency direction while preserving every existing public contract and behavior.
+The domain-analysis module `risk_compliance.py` currently imports `RiskGateState` from the downstream decision engine (`scoring_decision.py`). This reverse dependency violates the architecture-boundary and dependency-direction rules in CLAUDE.md: `RiskGateState` is an upstream gate contract produced by Risk analysis and consumed by the decision engine, yet its canonical definition lives inside the decision module. Moving the definition to a neutral contract module restores the required dependency direction while preserving the supported public construction and value semantics and the existing `product_research.scoring_decision.RiskGateState` import path.
 
 ## What Changes
 
@@ -8,7 +8,7 @@ The domain-analysis module `risk_compliance.py` currently imports `RiskGateState
 - **Modified capability**: `scoring-decision-engine` - `scoring_decision.py` re-exports the identical `RiskGateState` class object from the neutral contract for backward compatibility.
 - **Modified capability**: `risk-compliance-analysis` - `risk_compliance.py` imports `RiskGateState` exclusively from the neutral contract and no longer imports from `scoring_decision`.
 
-**BREAKING**: None (pure ownership refactor; `scoring_decision.RiskGateState is risk_gate.RiskGateState`).
+**BREAKING**: None for supported runtime/API usage. Canonical module ownership intentionally moves to `product_research.risk_gate`, so reflection metadata such as `RiskGateState.__module__` changes; the project has no persistence or serialization contract on this value, and no `__module__` or reflection compatibility hack is introduced.
 
 ## Capabilities
 
@@ -23,6 +23,6 @@ The domain-analysis module `risk_compliance.py` currently imports `RiskGateState
 
 ## Impact
 
-- Files: `product_research/risk_gate.py` (new), `product_research/scoring_decision.py`, `product_research/risk_compliance.py`, `tests/test_risk_gate.py` (new), `tests/test_scoring_decision.py`, `tests/test_risk_compliance.py`.
-- No external APIs, no behavior changes, no vocabulary changes, no new third-party dependencies.
+- Files: `product_research/risk_gate.py` (new), `product_research/scoring_decision.py`, `product_research/risk_compliance.py`, `tests/test_risk_gate.py` (new, including a producer-to-consumer boundary regression), `tests/test_scoring_decision.py`, `tests/test_risk_compliance.py`.
+- No external APIs, no vocabulary or behavior changes for supported usage, no new third-party dependencies.
 - Internal architecture only; `SKILL.md` and `references/` do not pin the definition location and require no changes.
