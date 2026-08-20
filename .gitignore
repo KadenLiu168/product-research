@@ -1,5 +1,6 @@
 .claude/
 .codex/
 .agents/
+.workbuddy/
 __pycache__/
 *.py[cod]
