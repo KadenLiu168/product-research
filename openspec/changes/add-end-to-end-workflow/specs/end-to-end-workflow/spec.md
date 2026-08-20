@@ -108,19 +108,45 @@ Stage 13 SHALL invoke the existing scoring-decision executor with the Stage 12 `
 - **WHEN** Red Team and final decision stages later execute
 - **THEN** the complete Stage 13 `DecisionResult` remains independently inspectable and unchanged
 
-### Requirement: Red Team inputs remain explicit and caller-owned
-Stage 14 SHALL accept only explicit caller-owned baseline Evidence IDs, Red Team Evidence IDs, findings, score revision proposals, and optional authoritative Risk and Unit Economics revision proposals expressed through the existing Red Team input contract. It SHALL NOT generate objections, perform hidden LLM reasoning, acquire Evidence, allocate or remap Evidence IDs, infer Evidence newness, rerun upstream analysis, or alter weights or business policy. Explicit empty Red Team collections SHALL represent a valid review with no proposed revision.
+### Requirement: Red Team inputs remain explicit, caller-owned, and bound to the current run
+Stage 14 SHALL accept only explicit caller-owned baseline Evidence IDs, Red Team Evidence IDs, findings, score revision proposals, and optional authoritative Risk and Unit Economics revision proposals expressed through the existing Red Team input contract. Every supplied baseline Evidence ID and Red Team Evidence ID SHALL resolve to an existing `Evidence` produced by Stage 3 of the same workflow run. A supplied Risk revision proposal's initial authoritative result SHALL value-equal the Stage 4 authoritative `RiskComplianceResult`, and a supplied economics revision proposal's initial authoritative result SHALL value-equal the Stage 5 authoritative `UnitEconomicsResult`. Authoritative value equality SHALL satisfy baseline binding without requiring Python object identity, including for a reconstructed immutable result with the same complete value.
+
+If an Evidence ID is foreign to the current Stage 3 universe or an optional proposal baseline does not bind to the corresponding current-run result, Stage 14 SHALL be `FAILED` for invalid workflow/control-plane input, Stages 15 and 16 SHALL be `BLOCKED`, and the existing Red Team evaluator SHALL NOT be invoked. The workflow SHALL NOT silently drop, filter, replace, remap, renumber, repair, or substitute an offending ID or proposal. It SHALL NOT generate objections, perform hidden LLM reasoning, acquire or fabricate Evidence, allocate another Evidence ID, infer Evidence newness, rerun upstream analysis, or alter weights or business policy. Explicit empty Red Team collections SHALL represent a valid review with no proposed revision.
 
 #### Scenario: Empty explicit review is valid
 - **WHEN** the caller supplies canonical provenance and explicit empty findings and proposal collections
 - **THEN** Stage 14 completes without inventing an objection or revision
 
-#### Scenario: Provenance crosses unchanged
-- **WHEN** the caller supplies canonical disjoint baseline and Red Team Evidence-ID collections
-- **THEN** the same collections are passed to the existing Red Team boundary without remapping or a second ID namespace
+#### Scenario: Red Team provenance belongs to the current workflow run
+- **WHEN** any baseline Evidence ID or Red Team Evidence ID does not resolve to an `Evidence` produced by Stage 3 of the same workflow run
+- **THEN** Stage 14 is `FAILED` without remapping, fabricating, replacing, or silently dropping that Evidence ID
+- **AND** Stage 15 does not invoke the existing Red Team evaluator and Stages 15 and 16 remain `BLOCKED`
+
+#### Scenario: Current-run Evidence provenance crosses unchanged
+- **WHEN** every baseline Evidence ID and Red Team Evidence ID resolves to Stage 3 Evidence from the same workflow run
+- **THEN** those exact IDs are passed unchanged to the existing Red Team evaluator
+- **AND** the workflow introduces no second Evidence namespace, allocator, or renumbering step
+
+#### Scenario: Reconstructed value-equal Risk baseline binds to Stage 4
+- **WHEN** a Risk revision proposal contains a reconstructed immutable initial result that value-equals the current Stage 4 authoritative `RiskComplianceResult`
+- **THEN** Stage 14 accepts the current-run Risk baseline binding without requiring object identity
+
+#### Scenario: Foreign Risk baseline fails the workflow boundary
+- **WHEN** a Risk revision proposal contains a structurally valid initial result that is not value-equal to the current Stage 4 authoritative `RiskComplianceResult`
+- **THEN** Stage 14 is `FAILED` without dropping, repairing, substituting, or rewriting the proposal
+- **AND** Stage 15 does not invoke the existing Red Team evaluator and Stages 15 and 16 remain `BLOCKED`
+
+#### Scenario: Reconstructed value-equal economics baseline binds to Stage 5
+- **WHEN** an economics revision proposal contains a reconstructed immutable initial result that value-equals the current Stage 5 authoritative `UnitEconomicsResult`
+- **THEN** Stage 14 accepts the current-run economics baseline binding without requiring object identity
+
+#### Scenario: Foreign economics baseline fails the workflow boundary
+- **WHEN** an economics revision proposal contains a structurally valid initial result that is not value-equal to the current Stage 5 authoritative `UnitEconomicsResult`
+- **THEN** Stage 14 is `FAILED` without dropping, repairing, substituting, or rewriting the proposal
+- **AND** Stage 15 does not invoke the existing Red Team evaluator and Stages 15 and 16 remain `BLOCKED`
 
 ### Requirement: Red Team revisions reuse existing fail-closed semantics
-Stage 15 SHALL invoke the existing Red Team revision capability using the Stage 12 initial scores, original authoritative Risk and Unit Economics results, and Stage 14 explicit inputs. It SHALL retain the complete existing `RedTeamRevisionResult`, including initial and revised scores, accepted findings, score revision records, and accepted authoritative Risk and economics revision records. Invalid, unsupported, duplicate, conflicting, baseline-only, or undeclared-Evidence proposals SHALL preserve the existing per-target and whole-run fail-closed behavior, and the workflow SHALL NOT reinterpret a rejected proposal.
+After Stage 14 current-run binding succeeds, Stage 15 SHALL invoke the existing Red Team revision capability using the Stage 12 initial scores and the unchanged Stage 14 explicit inputs. It SHALL retain the complete existing `RedTeamRevisionResult`, including initial and revised scores, accepted findings, score revision records, and accepted authoritative Risk and economics revision records. The existing Red Team capability SHALL remain the sole owner of canonical ordering, uniqueness, disjointness, causal Evidence authorization, proposal-local validity, duplicate/conflicting behavior, authoritative revised-result validity, economics threshold consistency, and per-target or whole-run fail-closed semantics. The workflow SHALL NOT implement a second Red Team validator or reinterpret a proposal-local rejection.
 
 #### Scenario: No accepted revision preserves initial values
 - **WHEN** the existing Red Team boundary accepts no revision

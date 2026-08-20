@@ -105,7 +105,7 @@ Dependencies are intentionally narrower than a single all-or-nothing chain:
 - Stage 15 requires initial scores, original authoritative Risk/economics values, and Stage 14 inputs.
 - Stage 16 requires the complete `RedTeamRevisionResult` and the same decision-policy inputs used at Stage 13.
 
-The workflow constructs only the Evidence-ID lookup already expected by analyzers, mapping each Stage 3 `Evidence.id` to that same `Evidence` object. It validates identity relationships at composition boundaries: semantic Evidence IDs and Red Team provenance must refer to Stage 3 Evidence; accepted Risk/economics proposals must retain the original result required by ECO-36. It never changes IDs or Evidence values to make validation pass.
+The workflow constructs only the Evidence-ID lookup already expected by analyzers, mapping each Stage 3 `Evidence.id` to that same `Evidence` object. At the Stage 14 composition boundary it validates two current-run relationships that no lower-level capability can observe: every declared baseline/Red Team Evidence ID must resolve through that lookup, and each optional authoritative Risk/economics proposal baseline must value-equal the result produced by Stage 4/5 of this run. It never changes IDs, Evidence values, or proposal baselines to make either relationship pass.
 
 Alternatives considered:
 
@@ -164,13 +164,22 @@ It then calls the same executor with `final_scores`, `final_risk_result.risk_gat
 
 Alternative considered: patch the initial decision result in place. Rejected because `DecisionResult` is immutable and any local patch would bypass aggregate, threshold, diagnostics, and precedence ownership.
 
-### 7. Pass Red Team values through ECO-36 without reinterpretation
+### 7. Bind Red Team inputs to the current workflow run before ECO-36
 
-Stage 14 retains caller-owned `baseline_evidence_ids`, `red_team_evidence_ids`, findings, proposals, and optional authoritative proposals. Explicit empty tuples are a real no-change review, not missing data. The coordinator performs only composition checks needed to establish that declared IDs belong to Stage 3 Evidence; canonical ordering, uniqueness, disjointness, new-Evidence authorization, duplicate-target behavior, causal trace, and policy-threshold equality remain owned by `evaluate_red_team_revision(...)` at Stage 15.
+Stage 14 retains caller-owned `baseline_evidence_ids`, `red_team_evidence_ids`, findings, proposals, and optional authoritative proposals. Explicit empty tuples are a real no-change review, not missing data. Before Stage 15, the coordinator performs exactly two integration checks that ECO-36 cannot perform because its evaluator receives neither the current run's Stage 3 Evidence objects nor separate Stage 4/5 authoritative baselines:
 
-Stage 15 supplies its own Stage 12 scorecard and original Stage 4/5 results to ECO-36. If an optional Risk or economics proposal names a different claimed initial result, ECO-36 rejects it under its existing contract. The workflow does not repair, drop, reorder, select among, or reinterpret proposal members before the existing evaluator sees them.
+1. Every `baseline_evidence_id` and `red_team_evidence_id` must resolve to an existing `Evidence` in this run's Stage 3 Evidence-ID lookup.
+2. A supplied `RiskRevisionProposal.initial_result` must value-equal this run's Stage 4 `RiskComplianceResult`, and a supplied `EconomicsRevisionProposal.initial_result` must value-equal this run's Stage 5 `UnitEconomicsResult`.
 
-Alternative considered: pre-validate and normalize proposals in Stage 14. Rejected because it would duplicate ECO-36 and could change its whole-run versus per-target fail-closed behavior.
+Binding uses immutable authoritative value equality, not Python object identity. A deterministically reconstructed result with equal complete value is therefore a valid baseline; a structurally valid but value-different result is foreign to this run. If either current-run check fails, Stage 14 is `FAILED` with invalid workflow/control-plane input, Stages 15 and 16 are `BLOCKED`, and `evaluate_red_team_revision(...)` is not invoked. The coordinator neither drops the offending input, converts it to `None`, substitutes the current result, nor rewrites any ID or proposal.
+
+Once both checks pass, Stage 15 passes the original Stage 14 values unchanged to `evaluate_red_team_revision(...)` together with the Stage 12 scorecard. ECO-36 remains the sole owner of canonical ordering, uniqueness, disjointness, proposal shape and validity, duplicate/conflicting targets, causal new-Evidence authorization, revised-score validity, authoritative revised-result validation, economics threshold consistency, whole-run/per-target fail-closed behavior, and immutable revision history. Stage 14 does not sort, deduplicate, filter, repair, or otherwise pre-validate those proposal-local semantics.
+
+Alternatives considered:
+
+- Rely on ECO-36 to reject a proposal baseline from another workflow run: rejected because its evaluator has no separate Stage 4/5 result against which to compare `proposal.initial_result`.
+- Require object identity with the Stage 4/5 result: rejected because value-equal immutable reconstruction is replay-safe and represents the same authoritative business state.
+- Pre-validate or normalize all Red Team inputs in Stage 14: rejected because it would duplicate ECO-36 and could change its whole-run versus per-target fail-closed behavior.
 
 ### 8. Preserve cumulative trace and keep ECO-38 downstream
 
@@ -190,7 +199,7 @@ Agent scenario edits should cover only observable routing and withholding change
 - [One coordinator signature must carry many explicit inputs] → Prefer explicitness and small stage-oriented grouping over a generic context mapping; do not hide ownership behind dynamic dispatch.
 - [Two workflow stages can reference one lower-level result] → Preserve object identity and classify only the relevant facet; do not call Brand / Content twice or split its authoritative result.
 - [Research planning and acquisition are returned by one existing call] → Derive Stage 2 and Stage 3 records from the ordered `ResearchRunResult` rather than changing research orchestration.
-- [A lower-level fail-closed result may not explain every rejected Red Team proposal] → Retain the complete ECO-36 result and do not invent workflow diagnostics; richer rejection reporting would require its own capability change.
+- [A lower-level fail-closed result may not explain every proposal-local Red Team rejection] → After current-run binding succeeds, retain the complete ECO-36 result and do not invent workflow diagnostics; richer rejection reporting would require its own capability change.
 - [Strict Stage 3 Evidence-universe checks preclude ad hoc post-scoring Evidence] → This is intentional for ECO-37; a future multi-pass Evidence lifecycle must be designed separately rather than remapping IDs.
 - [A heterogeneous stage output field is less statically precise] → Fixed stages, constructor invariants, and typed convenience accessors preserve usability without duplicating 16 wrapper hierarchies.
 - [Unexpected exceptions can leave a mixed trace] → Mark only the affected stage failed, preserve every prior record, block only stages requiring its missing result, and continue independent stages where safe.
