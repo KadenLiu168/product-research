@@ -14,7 +14,7 @@
 - [ ] 3.2 Verify typed construction failures without locking exception messages: non-string input raises `TypeError`; unsupported string raises `ValueError`
 - [ ] 3.3 Verify `RiskGateState("CLEAR").value == "CLEAR"`
 - [ ] 3.4 Verify `str(RiskGateState("CLEAR")) == "CLEAR"`
-- [ ] 3.5 Verify `repr` retains the existing value-object style (not a dataclass or Enum default representation)
+- [ ] 3.5 Verify `repr` retains the exact pre-move value-object format, e.g. `repr(RiskGateState("CLEAR")) == "RiskGateState('CLEAR')"` (not a dataclass or Enum default representation)
 - [ ] 3.6 Verify exact-type equality: equal same-type values compare equal; different values compare unequal; a different-type object holding the same value does not compare equal
 - [ ] 3.7 Verify hashing: equal values hash equal and values are usable as set / dict keys
 - [ ] 3.8 Verify full immutability: assignment to `_value` or `value`, assignment of a new attribute, and deletion of `_value` all fail

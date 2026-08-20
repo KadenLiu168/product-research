@@ -50,7 +50,7 @@ risk_compliance -> scoring_decision (only to obtain RiskGateState)
 
 ## Migration Plan
 
-N/A - this is an internal ownership refactor with no external impact.
+The canonical definition of `RiskGateState` moves from `product_research.scoring_decision` to `product_research.risk_gate`, so reflection metadata such as `RiskGateState.__module__` changes. The supported import path `product_research.scoring_decision.RiskGateState` remains available through the re-export, the project has no persistence or serialization contract on this value, and no migration action or compatibility hack is required.
 
 ## Open Questions
 

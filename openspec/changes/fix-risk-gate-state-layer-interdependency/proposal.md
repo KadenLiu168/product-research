@@ -23,6 +23,6 @@ The domain-analysis module `risk_compliance.py` currently imports `RiskGateState
 
 ## Impact
 
-- Files: `product_research/risk_gate.py` (new), `product_research/scoring_decision.py`, `product_research/risk_compliance.py`, `tests/test_risk_gate.py` (new, including a producer-to-consumer boundary regression), `tests/test_scoring_decision.py`, `tests/test_risk_compliance.py`.
+- Files: `product_research/risk_gate.py` (new), `product_research/scoring_decision.py`, `product_research/risk_compliance.py`, `tests/test_risk_gate.py` (new, including a producer-to-consumer boundary regression), `tests/test_risk_compliance.py`. Existing `tests/test_scoring_decision.py` must keep passing unchanged via the re-export and requires no modification.
 - No external APIs, no vocabulary or behavior changes for supported usage, no new third-party dependencies.
 - Internal architecture only; `SKILL.md` and `references/` do not pin the definition location and require no changes.
