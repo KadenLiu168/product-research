@@ -594,16 +594,11 @@ def run_end_to_end_workflow(
             research_run.plan,
             _status_for(WorkflowStage.RESEARCH_PLAN, research_run.plan),
         )
-        if research_run.plan is None:
-            records[WorkflowStage.RESEARCH_EVIDENCE] = _blocked(
-                WorkflowStage.RESEARCH_EVIDENCE, (WorkflowStage.RESEARCH_PLAN,)
-            )
-        else:
-            records[WorkflowStage.RESEARCH_EVIDENCE] = _result(
-                WorkflowStage.RESEARCH_EVIDENCE,
-                research_run,
-                _status_for(WorkflowStage.RESEARCH_EVIDENCE, research_run),
-            )
+        records[WorkflowStage.RESEARCH_EVIDENCE] = _result(
+            WorkflowStage.RESEARCH_EVIDENCE,
+            research_run,
+            _status_for(WorkflowStage.RESEARCH_EVIDENCE, research_run),
+        )
 
     evidence = (
         research_run.evidence

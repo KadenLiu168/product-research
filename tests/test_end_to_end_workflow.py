@@ -180,6 +180,24 @@ class WorkflowTestBase(unittest.TestCase):
         values.update(overrides)
         return self.workflow.run_end_to_end_workflow(**values)
 
+    def execute_with_captured_research(self, **overrides):
+        captured = []
+        run_research = self.research.run_research
+
+        def capture(*args):
+            result = run_research(*args)
+            captured.append(result)
+            return result
+
+        with mock.patch.object(
+            self.workflow.research_orchestration,
+            "run_research",
+            side_effect=capture,
+        ):
+            result = self.execute_workflow(**overrides)
+        self.assertEqual(len(captured), 1)
+        return result, captured[0]
+
 
 class WorkflowControlPlaneTests(WorkflowTestBase):
     def test_fixed_stage_vocabulary_is_ordered_and_results_are_immutable(self):
@@ -256,14 +274,21 @@ class WorkflowControlPlaneTests(WorkflowTestBase):
 class WorkflowCompositionTests(WorkflowTestBase):
     def test_real_research_and_downstream_boundaries_cross_without_conversion(self):
         subject = self.subject()
-        result = self.execute_workflow(subject=subject)
+        result, research_run = self.execute_with_captured_research(subject=subject)
         self.assertIs(result.subject, subject)
         self.assertIs(
             result.subject,
             result.stage(self.workflow.WorkflowStage.SUBJECT_VALIDATION).output,
         )
+        self.assertEqual(
+            result.stage(self.workflow.WorkflowStage.RESEARCH_PLAN).status,
+            self.workflow.WorkflowStageStatus.COMPLETE,
+        )
         research_record = result.stage(self.workflow.WorkflowStage.RESEARCH_EVIDENCE)
-        self.assertIs(result.research_run, research_record.output)
+        self.assertEqual(research_record.status, self.workflow.WorkflowStageStatus.COMPLETE)
+        self.assertIs(result.research_plan, research_run.plan)
+        self.assertIs(research_record.output, research_run)
+        self.assertIs(result.research_run, research_run)
         self.assertEqual(result.research_run.evidence[0].id.value, "E001")
         self.assertIs(result.evidence[0], result.research_run.evidence[0])
         for stage, result_value in (
@@ -314,6 +339,122 @@ class WorkflowCompositionTests(WorkflowTestBase):
         )
         self.assertTrue(all(analyzer.call_count == 0 for analyzer in analyzers))
 
+    def test_planner_exception_retains_the_exact_failed_research_run(self):
+        def planner(_):
+            raise RuntimeError("planner exploded")
+
+        result, research_run = self.execute_with_captured_research(planner=planner)
+        plan_record = result.stage(self.workflow.WorkflowStage.RESEARCH_PLAN)
+        research_record = result.stage(self.workflow.WorkflowStage.RESEARCH_EVIDENCE)
+
+        self.assertEqual(plan_record.status, self.workflow.WorkflowStageStatus.UNRESOLVED)
+        self.assertIsNone(plan_record.output)
+        self.assertIsNone(plan_record.failure_kind)
+        self.assertEqual(research_record.status, self.workflow.WorkflowStageStatus.UNRESOLVED)
+        self.assertIsNone(research_record.failure_kind)
+        self.assertIs(research_record.output, research_run)
+        self.assertIs(result.research_run, research_run)
+        self.assertEqual(research_run.status, self.research.RunStatus("FAILED"))
+        self.assertEqual(
+            tuple(failure.reason for failure in research_run.failures),
+            (self.research.FailureReason("PLANNER_EXCEPTION"),),
+        )
+
+    def test_invalid_plan_retains_the_exact_failed_research_run(self):
+        def planner(_):
+            return None
+
+        result, research_run = self.execute_with_captured_research(planner=planner)
+        plan_record = result.stage(self.workflow.WorkflowStage.RESEARCH_PLAN)
+        research_record = result.stage(self.workflow.WorkflowStage.RESEARCH_EVIDENCE)
+
+        self.assertEqual(plan_record.status, self.workflow.WorkflowStageStatus.UNRESOLVED)
+        self.assertIsNone(plan_record.output)
+        self.assertIsNone(plan_record.failure_kind)
+        self.assertEqual(research_record.status, self.workflow.WorkflowStageStatus.UNRESOLVED)
+        self.assertIsNone(research_record.failure_kind)
+        self.assertIs(research_record.output, research_run)
+        self.assertIs(result.research_run, research_run)
+        self.assertEqual(research_run.status, self.research.RunStatus("FAILED"))
+        self.assertEqual(
+            tuple(failure.reason for failure in research_run.failures),
+            (self.research.FailureReason("INVALID_PLAN"),),
+        )
+
+    def test_planner_failure_blocks_only_evidence_dependent_stages_and_keeps_economics_running(self):
+        def planner(_):
+            raise RuntimeError("planner exploded")
+
+        boundaries = (
+            (self.workflow.risk_compliance, "analyze_risk_compliance"),
+            (self.workflow.market_demand, "analyze_market_demand"),
+            (self.workflow.competition, "analyze_competition"),
+            (self.workflow.voc, "analyze_voc"),
+            (self.workflow.supply_chain, "analyze_supply_chain"),
+            (self.workflow.brand_content, "analyze_brand_content"),
+        )
+        with ExitStack() as stack:
+            analyzers = tuple(
+                stack.enter_context(mock.patch.object(module, name, wraps=getattr(module, name)))
+                for module, name in boundaries
+            )
+            economics = stack.enter_context(
+                mock.patch.object(
+                    self.workflow.unit_economics,
+                    "evaluate_unit_economics",
+                    wraps=self.workflow.unit_economics.evaluate_unit_economics,
+                )
+            )
+            result = self.execute_workflow(planner=planner)
+
+        self.assertEqual(result.evidence, ())
+        self.assertEqual(economics.call_count, 1)
+        self.assertEqual(
+            result.stage(self.workflow.WorkflowStage.UNIT_ECONOMICS).status,
+            self.workflow.WorkflowStageStatus.COMPLETE,
+        )
+        self.assertTrue(all(analyzer.call_count == 0 for analyzer in analyzers))
+        for stage in (
+            self.workflow.WorkflowStage.RISK_COMPLIANCE,
+            self.workflow.WorkflowStage.MARKET_DEMAND,
+            self.workflow.WorkflowStage.COMPETITION,
+            self.workflow.WorkflowStage.VOICE_OF_CUSTOMER,
+            self.workflow.WorkflowStage.SUPPLY_CHAIN,
+            self.workflow.WorkflowStage.BRAND_POTENTIAL,
+            self.workflow.WorkflowStage.CONTENT_POTENTIAL,
+        ):
+            with self.subTest(stage=stage):
+                record = result.stage(stage)
+                self.assertEqual(record.status, self.workflow.WorkflowStageStatus.BLOCKED)
+                self.assertIsNone(record.output)
+
+    def test_research_exception_and_invalid_return_remain_workflow_execution_failures(self):
+        cases = (
+            ("exception", {"side_effect": RuntimeError("research exploded")}),
+            ("invalid return", {"return_value": object()}),
+        )
+        for label, patch_kwargs in cases:
+            with self.subTest(case=label), mock.patch.object(
+                self.workflow.research_orchestration,
+                "run_research",
+                **patch_kwargs,
+            ):
+                result = self.execute_workflow()
+
+            plan_record = result.stage(self.workflow.WorkflowStage.RESEARCH_PLAN)
+            research_record = result.stage(self.workflow.WorkflowStage.RESEARCH_EVIDENCE)
+            self.assertEqual(plan_record.status, self.workflow.WorkflowStageStatus.FAILED)
+            self.assertEqual(
+                plan_record.failure_kind,
+                self.workflow.WorkflowFailureKind.EXECUTION_ERROR,
+            )
+            self.assertEqual(research_record.status, self.workflow.WorkflowStageStatus.BLOCKED)
+            self.assertEqual(
+                research_record.blocked_by,
+                (self.workflow.WorkflowStage.RESEARCH_PLAN,),
+            )
+            self.assertIsNone(result.research_run)
+
     def test_missing_economics_input_retains_the_existing_fail_closed_result(self):
         result = self.execute_workflow(unit_economics_inputs=None)
         economics_record = result.stage(self.workflow.WorkflowStage.UNIT_ECONOMICS)
@@ -328,17 +469,42 @@ class WorkflowCompositionTests(WorkflowTestBase):
         self.assertIsNotNone(result.initial_decision)
 
     def test_partial_research_coverage_remains_visible_while_later_analysis_runs(self):
-        result = self.execute_workflow(partial_coverage=True)
+        result, research_run = self.execute_with_captured_research(partial_coverage=True)
         self.assertEqual(result.research_run.status.value, "PARTIAL")
         self.assertEqual(result.research_run.missing_required_task_ids, ("task-02",))
+        self.assertEqual(
+            result.stage(self.workflow.WorkflowStage.RESEARCH_PLAN).status,
+            self.workflow.WorkflowStageStatus.COMPLETE,
+        )
         self.assertEqual(
             result.stage(self.workflow.WorkflowStage.RESEARCH_EVIDENCE).status,
             self.workflow.WorkflowStageStatus.UNRESOLVED,
         )
+        self.assertIs(result.research_plan, research_run.plan)
+        self.assertIs(result.research_run, research_run)
         self.assertIsNotNone(result.market_demand)
         self.assertEqual(
             result.stage(self.workflow.WorkflowStage.MARKET_DEMAND).status,
             self.workflow.WorkflowStageStatus.UNRESOLVED,
+        )
+
+    def test_failed_research_run_with_plan_remains_retained_and_blocks_evidence_analysis(self):
+        result, research_run = self.execute_with_captured_research(with_evidence=False)
+        research_record = result.stage(self.workflow.WorkflowStage.RESEARCH_EVIDENCE)
+
+        self.assertEqual(result.research_run.status, self.research.RunStatus("FAILED"))
+        self.assertEqual(
+            result.stage(self.workflow.WorkflowStage.RESEARCH_PLAN).status,
+            self.workflow.WorkflowStageStatus.COMPLETE,
+        )
+        self.assertEqual(research_record.status, self.workflow.WorkflowStageStatus.UNRESOLVED)
+        self.assertIs(research_record.output, research_run)
+        self.assertIs(result.research_run, research_run)
+        self.assertIs(result.research_plan, research_run.plan)
+        self.assertEqual(result.evidence, ())
+        self.assertEqual(
+            result.stage(self.workflow.WorkflowStage.RISK_COMPLIANCE).status,
+            self.workflow.WorkflowStageStatus.BLOCKED,
         )
 
     def test_adverse_domain_results_are_not_workflow_failures(self):
@@ -879,6 +1045,22 @@ class WorkflowArchitectureTests(WorkflowTestBase):
         for path in (root / "product_research").glob("*.py"):
             if path.name != "end_to_end_workflow.py":
                 self.assertNotIn("end_to_end_workflow", path.read_text())
+
+    def test_research_orchestration_remains_the_only_research_to_evidence_boundary(self):
+        root = Path(__file__).resolve().parents[1]
+        workflow_source = (root / "product_research" / "end_to_end_workflow.py").read_text()
+
+        self.assertEqual(workflow_source.count("research_orchestration.run_research("), 1)
+        for constructor in (
+            "ResearchRunResult(",
+            "ResearchFailure(",
+            "FailureReason(",
+            "RunStatus(",
+            "ResearchPlan(",
+            "EvidenceId(",
+        ):
+            self.assertNotIn(constructor, workflow_source)
+        self.assertNotIn("_validate_plan(", workflow_source)
 
     def test_workflow_public_surface_has_no_generic_executor_or_second_policy_engine(self):
         workflow = importlib.import_module("product_research.end_to_end_workflow")
