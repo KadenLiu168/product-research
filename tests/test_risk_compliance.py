@@ -1009,7 +1009,7 @@ class RiskComplianceFailureAndScopeTests(RiskComplianceTestBase):
         }
         self.assertTrue(
             imported.issubset(
-                {"dataclasses", "typing", "evidence", "evidence_assessment", "evidence_policy", "scoring_decision"}
+                {"dataclasses", "typing", "evidence", "evidence_assessment", "evidence_policy", "risk_gate"}
             )
         )
         forbidden = (

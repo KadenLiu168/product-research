@@ -108,6 +108,13 @@ The system SHALL consume exactly one explicit Risk Gate state from the closed vo
 - **WHEN** the Risk Gate state is absent or malformed
 - **THEN** the final label is `RISK REVIEW` unless a defined hard failure requires `NO-GO`
 
+### Requirement: RiskGateState is re-exported from the neutral contract
+`product_research/scoring_decision.py` SHALL import `RiskGateState` from the neutral contract `product_research/risk_gate.py` and expose it under the existing `scoring_decision.RiskGateState` name such that both names refer to the identical class object. The re-export SHALL NOT alter the closed vocabulary, the value semantics, or the supported public API of the scoring and decision capability.
+
+#### Scenario: Legacy access stays identical
+- **WHEN** code imports `RiskGateState` from `product_research.scoring_decision`
+- **THEN** `scoring_decision.RiskGateState` is the identical class object as `risk_gate.RiskGateState`, and values constructed through either name are interchangeable
+
 ### Requirement: Existing Unit Economics result is reused directly
 The system SHALL consume the existing immutable `UnitEconomicsResult` and its `EconomicsOutcome` exactly as produced by the `unit-economics-engine`. It SHALL NOT recalculate Contribution Profit or Margin, rerun either economics gate, generate economics thresholds, or reinterpret upstream economics reasons. A missing or malformed Unit Economics result SHALL be treated as unresolved economics.
 

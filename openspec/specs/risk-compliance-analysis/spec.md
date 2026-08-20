@@ -113,6 +113,13 @@ The result SHALL contain the existing decision-facing `RiskGateState` and SHALL 
 - **WHEN** any required Risk Area is missing or unresolved
 - **THEN** the aggregate gate is `REVIEW_REQUIRED`
 
+### Requirement: Risk Gate state is acquired from the neutral contract
+The Risk / Compliance analysis module SHALL acquire `RiskGateState` exclusively from the neutral contract `product_research/risk_gate.py` and SHALL NOT import from `product_research.scoring_decision`. The gate aggregation behavior, gate vocabulary, and gate precedence SHALL remain unchanged.
+
+#### Scenario: Dependency direction
+- **WHEN** `product_research/risk_compliance.py` is inspected statically
+- **THEN** it imports `RiskGateState` from `risk_gate` and contains no import from `scoring_decision`
+
 ### Requirement: Duplicate proposition keys and unsafe inputs fail closed
 The public analyzer SHALL return one structured result rather than expose ordinary evaluation exceptions. Duplicate `(Risk Area, exact proposition)` keys SHALL be reported in deterministic order, SHALL not use first-wins or last-wins behavior, and SHALL not produce findings for the duplicated key. Malformed proposition collections, required-area inputs, Evidence indexes, Evidence Policies, forged values, or indeterminate Assessment results SHALL produce stable input diagnostics and a `REVIEW_REQUIRED` gate; when shared inputs are unsafe, the analyzer SHALL not claim supported findings from them.
 

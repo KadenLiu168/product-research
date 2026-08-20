@@ -29,7 +29,7 @@ from .evidence_assessment import (
     assess_evidence,
 )
 from .evidence_policy import EvidencePolicy
-from .scoring_decision import RiskGateState
+from .risk_gate import RiskGateState
 
 
 class RiskArea(_ConstrainedValue):

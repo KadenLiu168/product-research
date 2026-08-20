@@ -13,6 +13,7 @@ from decimal import (
 from typing import ClassVar, Optional, Tuple
 
 from .evidence import Confidence, EvidenceId
+from .risk_gate import RiskGateState
 from .unit_economics import EconomicsOutcome, UnitEconomicsResult
 
 
@@ -68,10 +69,6 @@ class Dimension(_ClosedValue):
 
 class CoreOutcome(_ClosedValue):
     _allowed = ("PASS", "FAIL", "UNRESOLVED")
-
-
-class RiskGateState(_ClosedValue):
-    _allowed = ("CLEAR", "REVIEW_REQUIRED", "FATAL")
 
 
 class DecisionLabel(_ClosedValue):
