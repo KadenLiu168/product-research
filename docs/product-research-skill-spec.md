@@ -18,7 +18,7 @@ The core principle is:
 
 > No evidence, no conclusion.
 
-This document describes the broader v1 target workflow. Current deterministic boundaries include the source-agnostic `product_research/research_orchestration.py` control plane for explicit plans, injected acquisition, raw-finding normalization, and execution coverage, the fixed five-family `product_research/research_adapters.py` composition for configured acquisition callables, the explicit read-only Phase 6 boundaries for caller-declared inputs over existing Evidence, the evidence-grounded `product_research/initial_scoring.py` bridge for explicit Agent/caller judgments and retained Unit Economics values, the narrow `product_research/red_team_revision.py` boundary for explicit current-run authorization and immutable revision history, and the explicit normalized-input scoring boundary: `product_research/scoring_decision.py` executes the frozen eight-dimension weights, core thresholds, upstream gate precedence, and explicit analytical decision policy. `RawFinding` is non-durable, existing `Evidence` is the sole normalized contract, and family composition stops at the acquisition-result/raw-finding boundary. The repository still does not implement provider-backed research acquisition, automatic qualitative judgment generation or objection generation, Agent reasoning, reporting, or the full end-to-end workflow.
+This document describes the broader v1 target workflow. Current deterministic boundaries include the source-agnostic `product_research/research_orchestration.py` control plane for explicit plans, injected acquisition, raw-finding normalization, and execution coverage, the fixed five-family `product_research/research_adapters.py` composition for configured acquisition callables, the explicit read-only Phase 6 boundaries for caller-declared inputs over existing Evidence, the evidence-grounded `product_research/initial_scoring.py` bridge for explicit Agent/caller judgments and retained Unit Economics values, the narrow `product_research/red_team_revision.py` boundary for explicit current-run authorization and immutable revision history, the explicit normalized-input scoring boundary in `product_research/scoring_decision.py`, and the thin deterministic 16-stage coordinator in `product_research/end_to_end_workflow.py`. `RawFinding` is non-durable, existing `Evidence` is the sole normalized contract, and family composition stops at the acquisition-result/raw-finding boundary. The repository still does not implement provider-backed research acquisition, automatic qualitative judgment generation or objection generation, Agent reasoning, human-readable reporting, or Evidence Appendix rendering.
 
 All material conclusions must be supported by verifiable evidence. If evidence is insufficient, stale, conflicting, or estimated, the Skill must say so explicitly rather than filling gaps with unsupported assumptions.
 
@@ -51,8 +51,8 @@ It also includes:
 - Core dimension thresholds
 - Weighted scoring
 - Red Team review
-- Final report
-- Evidence appendix
+- Structured Final Result for downstream reporting
+- Final report and Evidence appendix (downstream ECO-38, not produced by the deterministic coordinator)
 
 ---
 
@@ -990,50 +990,50 @@ Red Team review may:
 The full workflow is:
 
 ```text
-Candidate Product
+1. Candidate and target-market normalization
         ↓
-Resolve Target Market
+2. Research plan definition
         ↓
-Research Planning
+3. Evidence collection and normalization
         ↓
-Evidence Collection
+4. Risk analysis and Risk Gate
         ↓
-Evidence Normalization
+5. Unit Economics and Economics Gates
         ↓
-Evidence Quality / Freshness Check
+6. Market Demand analysis
         ↓
-Risk Gate
+7. Competition analysis
         ↓
-Unit Economics Gate
+8. VOC and Differentiation analysis
         ↓
-Market Demand Analysis
+9. Supply Chain and Fulfillment analysis
         ↓
-Competition Analysis
+10. Brand Potential analysis
         ↓
-VOC Analysis
+11. Content Potential analysis
         ↓
-Supply Chain Analysis
+12. Initial Scoring from explicit caller-owned judgments
         ↓
-Brand / Content Analysis
+13. Initial scoring decision and core-threshold evaluation
         ↓
-8-Dimension Initial Scoring
+14. Evidence-backed Red Team review input acceptance
         ↓
-Core Dimension Threshold Check
+15. Red Team revision application
         ↓
-Red Team Review
+16. Post-Red-Team authoritative-state resolution and final scoring decision
         ↓
-Score & Confidence Revision
+Structured Final Result
         ↓
-Final Analytical Report
-        ↓
-Evidence Appendix
+Downstream ECO-38 report and Evidence Appendix (unavailable here)
 ```
+
+The coordinator preserves unresolved, blocked, and failed stage records cumulatively. It does not acquire Evidence, generate judgments, change policy, persist checkpoints, or render the downstream report contract.
 
 ---
 
 # 28. Final Report Format
 
-The final output should be an analysis report rather than a prescriptive action plan.
+The final output should be an analysis report rather than a prescriptive action plan. This section is the downstream ECO-38 report contract; ECO-37 ends at the structured Final Result above and does not produce this report.
 
 Recommended structure:
 
@@ -1253,7 +1253,7 @@ Uncertainty is part of the analysis rather than a failure of the analysis.
 
 # 38. v1 Success Criteria
 
-These are full-workflow target criteria, not a claim that the current repository can already perform every listed stage. The current repository implements the source-agnostic orchestration control plane, fixed family-level adapter composition, explicit read-only Market Demand, Competition, VOC, and Supply Chain interpretations over existing normalized Evidence, the explicit deterministic scoring and analytical decision boundaries described above, and the narrow deterministic Red Team revision boundary for caller-supplied findings and upstream results; provider-backed research acquisition, automatic qualitative judgment generation or objection generation, Agent reasoning, reporting, and end-to-end evaluation remain unavailable.
+These are full-workflow target criteria, not a claim that the current repository can already perform every listed stage. The current repository implements the source-agnostic orchestration control plane, fixed family-level adapter composition, explicit read-only analysis boundaries over existing normalized Evidence, deterministic Unit Economics, Initial Scoring, scoring and analytical decision boundaries, the narrow deterministic Red Team revision boundary, and the fixed deterministic end-to-end coordinator for explicit normalized inputs; provider-backed research acquisition, automatic qualitative judgment generation or objection generation, Agent reasoning, human-readable reporting, and Evidence Appendix rendering remain unavailable.
 
 The v1 Skill is considered successful when it can take a candidate product and reliably:
 

@@ -686,3 +686,44 @@ These scenarios cover the explicit ECO-21 Brand Potential and Content Potential 
 
 - **WHEN** equivalent propositions, Evidence index entries, relations, independence assignments, and missing-information entries are reordered
 - **THEN** the result replays with equivalent ordered findings, coverage, duplicate keys, diagnostics, IDs, Confidence, and nested Assessments
+
+## ECO-37 End-to-End Workflow Acceptance Scenarios
+
+These scenarios cover the fixed deterministic coordinator in `product_research/end_to_end_workflow.py`. The caller supplies the normalized subject, research callbacks, semantic analysis inputs, judgments, policy objects, and explicit Red Team review values. The coordinator only routes existing authoritative boundaries and returns structured state; it does not acquire data, infer judgments, or render a report.
+
+### Fixed trace and subject ownership
+
+- **RED WHEN** a workflow receives a missing or malformed candidate product or target market
+- **THEN** Stage 1 is `FAILED`, no candidate or market is synthesized, and every subject-dependent stage remains explicitly `BLOCKED`
+- **GREEN WHEN** a valid normalized subject is supplied
+- **THEN** the exact subject values are retained in an immutable 16-record trace
+
+- **WHEN** a workflow run returns, including after a prerequisite failure
+- **THEN** it contains exactly one record for each canonical stage in order, and later completion never erases an earlier `UNRESOLVED`, `BLOCKED`, or `FAILED` record
+
+### Explicit composition and fail-closed routing
+
+- **WHEN** injected planning, acquisition, and normalization produce a `ResearchRunResult`
+- **THEN** Stages 2 and 3 retain the same plan, run, normalized Evidence, coverage, failures, and run-local Evidence IDs, and all Evidence-dependent analyzers receive only the Stage 3 Evidence index
+
+- **WHEN** one independent analysis raises an ordinary exception or returns an unresolved domain result
+- **THEN** only that stage is failed or unresolved, independent later analyses still execute when their own prerequisites exist, and dependent scoring stages are blocked without placeholder inputs
+
+- **WHEN** Risk is `FATAL`, Unit Economics is `UNVIABLE`, or the existing decision executor returns a core-threshold `FAIL`
+- **THEN** the workflow records the valid adverse analytical outcome as `COMPLETE` and preserves the existing gate or decision precedence
+
+### Current-run Red Team binding and final resolution
+
+- **RED WHEN** a Red Team Evidence ID or Risk/economics proposal baseline is foreign to the current run
+- **THEN** Stage 14 is `FAILED`, the offending caller-owned input remains inspectable unchanged, the existing ECO-36 evaluator is not invoked, and Stages 15 and 16 are `BLOCKED`
+- **GREEN WHEN** current-run Evidence IDs and value-equal authoritative baselines bind successfully
+- **THEN** Stage 15 passes the original values unchanged to ECO-36, which remains the sole owner of proposal validation and fail-closed revision semantics
+
+- **WHEN** ECO-36 accepts score, Risk, or economics revisions
+- **THEN** Stage 16 resolves only from those accepted complete results, reuses the exact same caller-owned `WeightAdjustments` and `DecisionPolicy`, invokes the existing decision executor, and retains both initial and final `DecisionResult` values
+
+### Structured downstream boundary
+
+- **WHEN** Stage 16 completes
+- **THEN** the result exposes Evidence, analyses, Gate history, scores, Red Team history, and the final analytical decision as immutable structured values
+- **AND** human-readable report and Evidence Appendix generation remains downstream ECO-38 work and is unavailable in this workflow

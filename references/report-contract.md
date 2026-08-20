@@ -1,5 +1,7 @@
 # Final Report Contract
 
+This is a downstream ECO-38 contract. Its structured input is the immutable Final Result from `product_research/end_to_end_workflow.py`; the ECO-37 coordinator does not render these sections or an Evidence Appendix.
+
 Produce an evidence-backed analysis, not a prescriptive action plan or an autonomous commercial decision.
 
 ## Required Structure

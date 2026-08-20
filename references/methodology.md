@@ -23,8 +23,14 @@ Use [scoring-policy.md](scoring-policy.md) for weights, thresholds, and scoring 
 2. Turn each dimension and gate into explicit research questions.
 3. Collect evidence under [evidence-policy.md](evidence-policy.md), then normalize claims, dates, sources, statuses, and confidence.
 4. Evaluate gates before treating aggregate commercial attractiveness as actionable.
-5. Analyze all eight dimensions, score only where evidence supports scoring, check core thresholds, and run an evidence-based Red Team review.
-6. Revise scores or confidence when contrary evidence warrants it, then report under [report-contract.md](report-contract.md).
+5. Analyze all eight dimensions, score only where evidence supports scoring, check core thresholds, and prepare explicit Evidence-backed Red Team inputs.
+6. Apply accepted revisions, resolve the final authoritative state, and consume the structured result downstream; report rendering remains outside this deterministic endpoint.
+
+## Deterministic End-to-End Endpoint
+
+When all inputs are explicit and normalized, `product_research/end_to_end_workflow.py` runs the fixed 16-stage coordinator: subject validation; research plan; research Evidence; Risk analysis and Gate; Unit Economics and Gates; Market Demand; Competition; VOC and Differentiation; Supply Chain and Fulfillment; Brand Potential; Content Potential; Initial Scoring; initial scoring decision and core thresholds; Red Team input acceptance; Red Team revision; and post-Red-Team authoritative-state resolution plus final scoring decision.
+
+The coordinator retains one immutable ordered record for every stage, including unresolved, blocked, or failed stages, and reuses the existing Evidence, analysis, Gate, score, Red Team, and decision values without conversion or a second policy engine. Missing information remains unresolved or blocks only the dependent boundary. Its Stage 16 output is a structured Final Result for downstream consumers; it does not render the human-readable report or Evidence Appendix. Those reporting capabilities are downstream ECO-38 work and are unavailable until implemented.
 
 ## Initial Scoring Bridge
 
@@ -83,4 +89,4 @@ The current executable boundary is `product_research/risk_compliance.py`. It con
 
 After initial scoring, separately seek evidence that demand is overstated, commerce signals are weak, interest is hype, competition or incumbent concentration is understated, cost/CAC/returns are optimistic, VOC is biased, differentiation is copyable, or IP/compliance/liability risks are hidden. Objections require evidence. Revise scores or confidence only when warranted and identify what changed, why, and which evidence caused it.
 
-The Agent/caller owns this adversarial reasoning and any upstream Risk or Unit Economics re-evaluation. Once those explicit normalized values exist, pass canonical baseline/current-run Evidence IDs, findings, per-dimension proposals, and complete authoritative before/after results to `product_research/red_team_revision.py`. The deterministic boundary validates current-run authorization, applies accepted changes, and preserves immutable history; it does not generate objections, interpret Evidence, rerun analysis, recalculate economics, or make the final decision.
+The Agent/caller owns this adversarial reasoning and any upstream Risk or Unit Economics re-evaluation. Once those explicit normalized values exist, pass canonical baseline/current-run Evidence IDs, findings, per-dimension proposals, and complete authoritative before/after results to `product_research/red_team_revision.py` through the Stage 14/15 boundary of the end-to-end coordinator. The deterministic boundary validates current-run authorization, applies accepted changes, and preserves immutable history; it does not generate objections, interpret Evidence, rerun analysis, recalculate economics, or make the final decision. Stage 16 resolves the final authoritative state and invokes the existing scoring-decision executor; readable report and Evidence Appendix generation remains downstream.

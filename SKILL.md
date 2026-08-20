@@ -19,6 +19,7 @@ Evaluate a candidate product supplied by the user. Do not use this version to di
 - `product_research/initial_scoring.py` maps retained Contribution Margin relative to the caller-owned Minimum Viability and Dynamic Target thresholds using its frozen Decimal rubric; it does not recalculate economics or rerun either gate.
 - When normalized scores, explicit adjustments, upstream gate results, and an explicit GO threshold are available, route deterministic scoring and analytical decision execution to `product_research/scoring_decision.py`; it does not generate scores or policy inputs.
 - After Initial Scoring, the Agent/caller owns adversarial reasoning and any upstream re-evaluation. Pass only explicit canonical findings, per-dimension proposals, and complete revised Risk or Unit Economics results to `product_research/red_team_revision.py`; it authorizes traceable changes and preserves history but does not generate objections, interpret Evidence, rerun analysis, calculate economics, or choose a final decision.
+- For full deterministic execution with explicit normalized inputs, route the fixed 16-stage composition through `product_research/end_to_end_workflow.py`; it retains the existing authoritative values and cumulative stage trace, but does not generate judgments, acquire Evidence, change policy, or render reports.
 
 ## Reference Routing
 
@@ -42,8 +43,9 @@ Read each reference before performing its stage:
 | Evidence-grounded initial score normalization | [product_research/initial_scoring.py](product_research/initial_scoring.py) |
 | Normalized eight-dimension scoring, thresholds, and analytical decisions | [product_research/scoring_decision.py](product_research/scoring_decision.py) and [references/scoring-policy.md](references/scoring-policy.md) |
 | Red Team revision authorization and immutable before/after history | [product_research/red_team_revision.py](product_research/red_team_revision.py) |
+| Fixed 16-stage deterministic composition and structured Final Result | [product_research/end_to_end_workflow.py](product_research/end_to_end_workflow.py) |
 | Risk and Unit Economics gates | [references/gates.md](references/gates.md) |
-| Final output | [references/report-contract.md](references/report-contract.md) |
+| Downstream human-readable report and Evidence Appendix contract | [references/report-contract.md](references/report-contract.md) |
 
 For a full evaluation, read all five references and the shared Evidence representation when creating or exchanging Evidence records, and the Evidence assessment boundary before combining multiple sources into a claim-level Confidence. For a narrower follow-up, read every reference governing the requested stage and any upstream evidence or gate rules it depends on.
 
@@ -64,15 +66,17 @@ Follow this order:
 11. Evaluate Content Potential.
 12. Produce explicit Agent/caller qualitative judgments where relevant Evidence supports them, then pass Phase 6 results, Unit Economics, and those judgments through Initial Scoring.
 13. Check core-dimension thresholds.
-14. Run Red Team Review.
-15. Revise scores when warranted by evidence.
-16. Generate final report and Evidence Appendix.
+14. Accept explicit current-run Evidence-backed Red Team review inputs.
+15. Apply accepted Red Team revisions through the existing revision boundary.
+16. Resolve authoritative post-Red-Team state and run the final scoring decision.
 
 Do not skip an earlier stage merely because a later-stage answer appears intuitive. If evidence is insufficient for a stage, record the uncertainty and its downstream effect instead of inventing completion.
 
+Stage 16 returns the immutable structured Final Result: the ordered stage trace, Evidence traceability, analysis and Gate history, initial and revised scores, Red Team history, and initial/final decisions. This deterministic phase does not render a human-readable report or Evidence Appendix; those are downstream ECO-38 capabilities and are unavailable until that Change is implemented.
+
 ## Unimplemented Capabilities
 
-This phase provides the shared structural Evidence representation, deterministic Evidence Policy validation, deterministic Evidence Assessment with explicit per-record stances, independence groups, missing information, conflict preservation, and claim-level Confidence ceilings, explicit read-only Market Demand, Competition, VOC, Supply Chain, Brand / Content, and Risk & Compliance interpretations from existing Evidence, deterministic Unit Economics calculation from explicit normalized inputs with caller-supplied thresholds and fail-closed gate results, evidence-grounded Initial Scoring from explicit Agent/caller judgments and retained Unit Economics values, deterministic scoring/analytical decision execution from explicit normalized inputs, a narrow Red Team revision authorization/history boundary, a source-agnostic orchestration boundary for injected research planning, acquisition, and Evidence normalization, and a fixed five-family adapter composition in `product_research/research_adapters.py`. The VOC, Supply Chain, Brand / Content, Risk & Compliance, and Red Team boundaries accept only caller-declared normalized values and do not infer meaning from Evidence. `RawFinding` is an acquisition-only, non-durable value; existing `Evidence` remains the sole normalized contract, and configured family adapters stop at `AcquisitionResult` / `RawFinding`. Concrete provider-backed adapters, marketplace or supplier scrapers, provider-backed acquisition, provider-backed regulation, patent, or trademark search, automatic risk scanning, automatic qualitative judgment generation, automatic weight selection, automatic VOC clustering, automatic Red Team objection generation, persistence, reporting, and the full provider-backed workflow remain unavailable. Neither boundary performs external research by itself.
+This phase provides the shared structural Evidence representation, deterministic Evidence Policy validation, deterministic Evidence Assessment with explicit per-record stances, independence groups, missing information, conflict preservation, and claim-level Confidence ceilings, explicit read-only Market Demand, Competition, VOC, Supply Chain, Brand / Content, and Risk & Compliance interpretations from existing Evidence, deterministic Unit Economics calculation from explicit normalized inputs with caller-supplied thresholds and fail-closed gate results, evidence-grounded Initial Scoring from explicit Agent/caller judgments and retained Unit Economics values, deterministic scoring/analytical decision execution from explicit normalized inputs, the fixed 16-stage coordinator in `product_research/end_to_end_workflow.py`, a narrow Red Team revision authorization/history boundary, a source-agnostic orchestration boundary for injected research planning, acquisition, and Evidence normalization, and a fixed five-family adapter composition in `product_research/research_adapters.py`. The VOC, Supply Chain, Brand / Content, Risk & Compliance, Red Team, and workflow boundaries accept only caller-declared normalized values and do not infer meaning from Evidence. `RawFinding` is an acquisition-only, non-durable value; existing `Evidence` remains the sole normalized contract, and configured family adapters stop at `AcquisitionResult` / `RawFinding`. Concrete provider-backed adapters, marketplace or supplier scrapers, provider-backed acquisition, provider-backed regulation, patent, or trademark search, automatic risk scanning, automatic qualitative judgment generation, automatic weight selection, automatic VOC clustering, automatic Red Team objection generation, persistence, human-readable reporting, Evidence Appendix rendering, and the full provider-backed workflow remain unavailable. Neither boundary performs external research by itself.
 
 Use only tools actually available in the current environment. Never claim to have accessed a source, collected data, run a calculation, or completed a workflow stage when that capability was unavailable. In that case:
 
