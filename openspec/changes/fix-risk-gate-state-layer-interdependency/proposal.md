@@ -1,0 +1,28 @@
+## Why
+
+The domain-analysis module `risk_compliance.py` currently imports `RiskGateState` from the downstream decision engine (`scoring_decision.py`). This reverse dependency violates the architecture-boundary and dependency-direction rules in CLAUDE.md: `RiskGateState` is an upstream gate contract produced by Risk analysis and consumed by the decision engine, yet its canonical definition lives inside the decision module. Moving the definition to a neutral contract module restores the required dependency direction while preserving every existing public contract and behavior.
+
+## What Changes
+
+- **New capability**: `risk-gate` - neutral shared contract module for `RiskGateState` (canonical definition, closed vocabulary, immutable value semantics).
+- **Modified capability**: `scoring-decision-engine` - `scoring_decision.py` re-exports the identical `RiskGateState` class object from the neutral contract for backward compatibility.
+- **Modified capability**: `risk-compliance-analysis` - `risk_compliance.py` imports `RiskGateState` exclusively from the neutral contract and no longer imports from `scoring_decision`.
+
+**BREAKING**: None (pure ownership refactor; `scoring_decision.RiskGateState is risk_gate.RiskGateState`).
+
+## Capabilities
+
+### New Capabilities
+
+- **risk-gate**: Neutral domain contract for `RiskGateState` (`product_research/risk_gate.py`).
+
+### Modified Capabilities
+
+- **scoring-decision-engine**: `RiskGateState` is defined in the neutral contract and re-exported through the existing `product_research.scoring_decision` name.
+- **risk-compliance-analysis**: `RiskGateState` is acquired exclusively from the neutral contract; the module no longer depends on `scoring_decision`.
+
+## Impact
+
+- Files: `product_research/risk_gate.py` (new), `product_research/scoring_decision.py`, `product_research/risk_compliance.py`, `tests/test_risk_gate.py` (new), `tests/test_scoring_decision.py`, `tests/test_risk_compliance.py`.
+- No external APIs, no behavior changes, no vocabulary changes, no new third-party dependencies.
+- Internal architecture only; `SKILL.md` and `references/` do not pin the definition location and require no changes.
