@@ -8,8 +8,10 @@ from .evidence import Confidence, EvidenceId, Status
 from .risk_compliance import (
     RiskAnalysisDiagnostic,
     RiskArea,
+    RiskClassification,
     RiskComplianceResult,
     RiskFinding,
+    RiskFindingOutcome,
     RiskPropositionKey,
 )
 from .risk_gate import RiskGateState
@@ -49,6 +51,16 @@ def _require_non_empty_text(value, field_name):
         raise ValueError(f"{field_name} must not be empty")
 
 
+def _closed_value_is_valid(value, value_type):
+    if type(value) is not value_type:
+        return False
+    try:
+        value_type(value.value)
+    except (AttributeError, TypeError, ValueError):
+        return False
+    return True
+
+
 def _require_canonical_ids(value, field_name, *, non_empty=False):
     if type(value) is not tuple:
         raise TypeError(f"{field_name} must be a tuple")
@@ -61,6 +73,7 @@ def _require_canonical_ids(value, field_name, *, non_empty=False):
             raise TypeError(f"{field_name} must contain EvidenceId values")
         try:
             evidence_value = evidence_id.value
+            EvidenceId(evidence_value)
             already_seen = evidence_id in seen
         except (AttributeError, TypeError, ValueError) as exc:
             raise ValueError(f"{field_name} must contain valid EvidenceId values") from exc
@@ -140,14 +153,35 @@ def _risk_result_is_valid(value):
             value.missing_required_areas,
         ):
             for area in areas:
-                RiskArea(area.value)
+                if not _closed_value_is_valid(area, RiskArea):
+                    return False
         for finding in value.findings:
             RiskFinding.__post_init__(finding)
+            if not _closed_value_is_valid(finding.area, RiskArea):
+                return False
+            if not _closed_value_is_valid(finding.outcome, RiskFindingOutcome):
+                return False
+            if finding.supported_classification is not None and not _closed_value_is_valid(
+                finding.supported_classification, RiskClassification
+            ):
+                return False
+            if not _closed_value_is_valid(finding.confidence, Confidence):
+                return False
+            for field_name in ("supporting_ids", "adverse_ids", "excluded_ids"):
+                if not _canonical_ids_are_valid(getattr(finding, field_name), field_name):
+                    return False
+            for diagnostic in finding.diagnostics:
+                if not _closed_value_is_valid(diagnostic, RiskAnalysisDiagnostic):
+                    return False
         for key in value.duplicate_proposition_keys:
             RiskPropositionKey.__post_init__(key)
+            if not _closed_value_is_valid(key.area, RiskArea):
+                return False
         for diagnostic in value.diagnostics:
-            RiskAnalysisDiagnostic(diagnostic.value)
-        RiskGateState(value.risk_gate.value)
+            if not _closed_value_is_valid(diagnostic, RiskAnalysisDiagnostic):
+                return False
+        if not _closed_value_is_valid(value.risk_gate, RiskGateState):
+            return False
     except (AttributeError, TypeError, ValueError, KeyError):
         return False
     return True
@@ -162,18 +196,26 @@ def _economics_result_is_valid(value):
         ContributionMargin.__post_init__(value.contribution_margin)
         GateResult.__post_init__(value.minimum_viability_gate)
         GateResult.__post_init__(value.dynamic_target_gate)
-        Status(value.contribution_profit.status.value)
-        Status(value.contribution_margin.status.value)
-        Confidence(value.contribution_profit.confidence.value)
-        Confidence(value.contribution_margin.confidence.value)
-        GateOutcome(value.minimum_viability_gate.outcome.value)
-        GateOutcome(value.dynamic_target_gate.outcome.value)
-        EconomicsOutcome(value.outcome.value)
+        for contribution in (value.contribution_profit, value.contribution_margin):
+            if not _closed_value_is_valid(contribution.status, Status):
+                return False
+            if not _closed_value_is_valid(contribution.confidence, Confidence):
+                return False
+            if not _canonical_ids_are_valid(contribution.evidence_ids, "evidence_ids"):
+                return False
+        for gate in (value.minimum_viability_gate, value.dynamic_target_gate):
+            if not _closed_value_is_valid(gate.outcome, GateOutcome):
+                return False
+            for reason in gate.reasons:
+                if not _closed_value_is_valid(reason, ReasonCode):
+                    return False
+        if not _closed_value_is_valid(value.outcome, EconomicsOutcome):
+            return False
         for reason in value.reasons:
-            ReasonCode(reason.value)
-        _require_canonical_ids(value.contribution_profit.evidence_ids, "evidence_ids")
-        _require_canonical_ids(value.contribution_margin.evidence_ids, "evidence_ids")
-        _require_canonical_ids(value.evidence_ids, "evidence_ids")
+            if not _closed_value_is_valid(reason, ReasonCode):
+                return False
+        if not _canonical_ids_are_valid(value.evidence_ids, "evidence_ids"):
+            return False
     except (AttributeError, TypeError, ValueError, KeyError):
         return False
     return True
@@ -495,8 +537,8 @@ def _accepted_economics_revision(proposal, universe, red_team):
     ):
         return None
     if (
-        initial.minimum_viability_gate == revised.minimum_viability_gate
-        and initial.dynamic_target_gate == revised.dynamic_target_gate
+        initial.minimum_viability_gate.outcome == revised.minimum_viability_gate.outcome
+        and initial.dynamic_target_gate.outcome == revised.dynamic_target_gate.outcome
         and initial.outcome == revised.outcome
     ):
         return None

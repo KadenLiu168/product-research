@@ -18,6 +18,21 @@ DIMENSION_FIELDS = (
 )
 
 
+class _ForgedPayload:
+    """Invalid non-string payload that compares like one valid closed value."""
+
+    def __init__(self, equal_value):
+        self.equal_value = equal_value
+
+    def __hash__(self):
+        return hash(self.equal_value)
+
+    def __eq__(self, other):
+        if type(other) is str:
+            return other == self.equal_value
+        return NotImplemented
+
+
 def _module():
     return importlib.import_module("product_research.red_team_revision")
 
@@ -35,6 +50,21 @@ class RedTeamRevisionTestBase(unittest.TestCase):
 
     def ids(self, *values):
         return tuple(self.eid(value) for value in values)
+
+    def forged_value(self, value_type, value):
+        forged = object.__new__(value_type)
+        object.__setattr__(forged, "_value", value)
+        return forged
+
+    def forged_dataclass(self, value, **overrides):
+        forged = object.__new__(type(value))
+        for field in dataclasses.fields(value):
+            replacement = overrides[field.name] if field.name in overrides else getattr(value, field.name)
+            object.__setattr__(forged, field.name, replacement)
+        return forged
+
+    def forged_eid(self, equal_value):
+        return self.forged_value(self.e.EvidenceId, _ForgedPayload(equal_value))
 
     def score(self, value=Decimal("70"), confidence="Medium", evidence_ids=("E001",)):
         return self.sd.DimensionScore(
@@ -61,6 +91,33 @@ class RedTeamRevisionTestBase(unittest.TestCase):
             unresolved_required_areas=(),
             missing_required_areas=(),
             findings=(),
+            duplicate_proposition_keys=(),
+            risk_gate=self.risk.RiskGateState(gate),
+            diagnostics=(),
+        )
+
+    def risk_finding(self):
+        return self.risk.RiskFinding(
+            area=self.risk.RiskArea("REGULATION"),
+            proposition="regulatory claim",
+            outcome=self.risk.RiskFindingOutcome("SUPPORTED"),
+            supported_classification=self.risk.RiskClassification("NORMAL"),
+            confidence=self.e.Confidence("High"),
+            supporting_ids=self.ids("E101"),
+            adverse_ids=(),
+            excluded_ids=(),
+            assessment=self.risk._empty_assessment(),
+            diagnostics=(),
+        )
+
+    def risk_result_with_finding(self, finding, gate="CLEAR"):
+        area = finding.area
+        return self.risk.RiskComplianceResult(
+            required_areas=(area,),
+            supported_required_areas=(area,),
+            unresolved_required_areas=(),
+            missing_required_areas=(),
+            findings=(finding,),
             duplicate_proposition_keys=(),
             risk_gate=self.risk.RiskGateState(gate),
             diagnostics=(),
@@ -255,6 +312,74 @@ class ProvenanceAndFindingTests(RedTeamRevisionTestBase):
         )
         self.assertEqual(result.revised_scores, result.initial_scores)
         self.assertEqual(result.findings, ())
+
+    def test_forged_evidence_id_payload_rejects_baseline_and_red_team_provenance(self):
+        initial = self.scores()
+        economics = self.economics_result(outcome="BELOW_TARGET")
+        proposal = self.m.EconomicsRevisionProposal(
+            self.economics_result(), economics, "economics changed", self.ids("E101")
+        )
+        cases = (
+            (self.ids("E001"), (self.forged_eid("E101"),)),
+            ((self.forged_eid("E001"),), self.ids("E101")),
+        )
+        for baseline, red_team in cases:
+            with self.subTest(baseline=baseline, red_team=red_team):
+                result = self.m.evaluate_red_team_revision(
+                    initial,
+                    baseline,
+                    red_team,
+                    (),
+                    (),
+                    None,
+                    proposal,
+                )
+                self.assertEqual(result.revised_scores, initial)
+                self.assertIsNone(result.economics_revision)
+
+    def test_forged_finding_evidence_id_is_local_and_valid_finding_survives(self):
+        forged = object.__new__(self.m.RedTeamFinding)
+        object.__setattr__(forged, "text", "forged finding")
+        object.__setattr__(forged, "evidence_ids", (self.forged_eid("E101"),))
+        valid = self.m.RedTeamFinding("valid finding", self.ids("E101"))
+        result = self.evaluate(findings=(forged, valid))
+        self.assertEqual(result.findings, (valid,))
+
+    def test_forged_score_proposal_causal_id_is_local_and_valid_target_survives(self):
+        forged = object.__new__(self.m.ScoreRevisionProposal)
+        object.__setattr__(forged, "dimension", self.sd.Dimension("Market Demand"))
+        object.__setattr__(forged, "revised_score", self.score(Decimal("60"), evidence_ids=("E101",)))
+        object.__setattr__(forged, "reason", "forged causal id")
+        object.__setattr__(forged, "causal_evidence_ids", (self.forged_eid("E101"),))
+        valid = self.m.ScoreRevisionProposal(
+            self.sd.Dimension("Competition"),
+            self.score(Decimal("90"), evidence_ids=("E101",)),
+            "valid independent revision",
+            self.ids("E101"),
+        )
+        result = self.evaluate(score_proposals=(forged, valid))
+        self.assertEqual(result.revised_scores.market_demand, result.initial_scores.market_demand)
+        self.assertEqual(result.revised_scores.competition.score, Decimal("90"))
+
+    def test_forged_concrete_score_trace_is_local_and_valid_target_survives(self):
+        forged_score = object.__new__(self.sd.DimensionScore)
+        object.__setattr__(forged_score, "score", Decimal("60"))
+        object.__setattr__(forged_score, "confidence", self.e.Confidence("Medium"))
+        object.__setattr__(forged_score, "evidence_ids", (self.forged_eid("E101"),))
+        forged = object.__new__(self.m.ScoreRevisionProposal)
+        object.__setattr__(forged, "dimension", self.sd.Dimension("Market Demand"))
+        object.__setattr__(forged, "revised_score", forged_score)
+        object.__setattr__(forged, "reason", "forged score trace")
+        object.__setattr__(forged, "causal_evidence_ids", self.ids("E101"))
+        valid = self.m.ScoreRevisionProposal(
+            self.sd.Dimension("Competition"),
+            self.score(Decimal("90"), evidence_ids=("E101",)),
+            "valid independent revision",
+            self.ids("E101"),
+        )
+        result = self.evaluate(score_proposals=(forged, valid))
+        self.assertEqual(result.revised_scores.market_demand, result.initial_scores.market_demand)
+        self.assertEqual(result.revised_scores.competition.score, Decimal("90"))
 
     def test_invalid_initial_scorecard_is_rejected_not_fabricated(self):
         invalid_scorecard = object.__new__(self.sd.DimensionScores)
@@ -562,6 +687,54 @@ class AuthoritativeGateTests(RedTeamRevisionTestBase):
         self.assertEqual(result.findings, (finding,))
         self.assertIsNone(result.risk_revision)
 
+    def test_forged_risk_closed_values_are_local_and_valid_score_survives(self):
+        initial_finding = self.risk_finding()
+        initial = self.risk_result_with_finding(initial_finding)
+        valid_score = self.m.ScoreRevisionProposal(
+            self.sd.Dimension("Competition"),
+            self.score(Decimal("90"), evidence_ids=("E101",)),
+            "valid independent revision",
+            self.ids("E101"),
+        )
+        cases = (
+            self.forged_dataclass(
+                initial_finding,
+                outcome=self.forged_value(self.risk.RiskFindingOutcome, "INVALID"),
+                supported_classification=None,
+            ),
+            self.forged_dataclass(
+                initial_finding,
+                supported_classification=self.forged_value(
+                    self.risk.RiskClassification, "INVALID"
+                ),
+            ),
+            self.forged_dataclass(
+                initial_finding,
+                area=self.forged_value(
+                    self.risk.RiskArea, _ForgedPayload("REGULATION")
+                ),
+            ),
+            self.forged_dataclass(
+                initial_finding,
+                supporting_ids=(self.forged_eid("E101"),),
+            ),
+        )
+        for finding in cases:
+            with self.subTest(finding=finding):
+                revised = self.risk_result_with_finding(finding, gate="REVIEW_REQUIRED")
+                proposal = self.m.RiskRevisionProposal(
+                    initial,
+                    revised,
+                    "forged risk result",
+                    self.ids("E101"),
+                )
+                result = self.evaluate(
+                    score_proposals=(valid_score,), risk_proposal=proposal
+                )
+                self.assertIsNone(result.risk_revision)
+                self.assertEqual(result.revised_scores.competition.score, Decimal("90"))
+                self.assertEqual(result.revised_scores.risk_compliance, result.initial_scores.risk_compliance)
+
     def test_economics_revision_requires_equal_thresholds_and_authoritative_values(self):
         proposal = self.m.EconomicsRevisionProposal(
             self.economics_result(),
@@ -580,6 +753,90 @@ class AuthoritativeGateTests(RedTeamRevisionTestBase):
             proposal.causal_evidence_ids,
         )
         self.assertIsNone(self.evaluate(economics_proposal=threshold_changed).economics_revision)
+
+        dynamic_threshold_changed = self.m.EconomicsRevisionProposal(
+            proposal.initial_result,
+            self.economics_result(dynamic=Decimal("0.30"), outcome="BELOW_TARGET"),
+            proposal.reason,
+            proposal.causal_evidence_ids,
+        )
+        self.assertIsNone(self.evaluate(economics_proposal=dynamic_threshold_changed).economics_revision)
+
+    def test_economics_revision_ignores_non_state_result_changes_but_keeps_findings(self):
+        initial = self.economics_result()
+        changed_profit = dataclasses.replace(
+            initial,
+            contribution_profit=dataclasses.replace(
+                initial.contribution_profit, amount=Decimal("41")
+            ),
+        )
+        changed_margin = dataclasses.replace(
+            initial,
+            contribution_margin=dataclasses.replace(
+                initial.contribution_margin, value=Decimal("0.41")
+            ),
+        )
+        changed_actual_margin = dataclasses.replace(
+            initial,
+            minimum_viability_gate=dataclasses.replace(
+                initial.minimum_viability_gate, actual_margin=Decimal("0.35")
+            ),
+        )
+        changed_reasons = dataclasses.replace(
+            initial,
+            dynamic_target_gate=dataclasses.replace(
+                initial.dynamic_target_gate,
+                reasons=(self.economics.ReasonCode("CALCULATION_ERROR"),),
+            ),
+        )
+        finding = self.m.RedTeamFinding("independent challenge", self.ids("E101"))
+        for revised in (changed_profit, changed_margin, changed_actual_margin, changed_reasons):
+            with self.subTest(revised=revised):
+                proposal = self.m.EconomicsRevisionProposal(
+                    initial, revised, "non-state economics change", self.ids("E101")
+                )
+                result = self.evaluate(findings=(finding,), economics_proposal=proposal)
+                self.assertEqual(result.findings, (finding,))
+                self.assertIsNone(result.economics_revision)
+
+    def test_each_authoritative_economics_state_transition_is_accepted_whole(self):
+        initial = self.economics_result()
+        revised_results = (
+            dataclasses.replace(
+                initial,
+                minimum_viability_gate=dataclasses.replace(
+                    initial.minimum_viability_gate,
+                    outcome=self.economics.GateOutcome("FAIL"),
+                    actual_margin=Decimal("0.10"),
+                ),
+            ),
+            dataclasses.replace(
+                initial,
+                dynamic_target_gate=dataclasses.replace(
+                    initial.dynamic_target_gate,
+                    outcome=self.economics.GateOutcome("FAIL"),
+                    actual_margin=Decimal("0.30"),
+                ),
+            ),
+            dataclasses.replace(
+                initial,
+                outcome=self.economics.EconomicsOutcome("BELOW_TARGET"),
+            ),
+        )
+        for revised in revised_results:
+            with self.subTest(revised=revised):
+                reason = "authoritative economics state changed"
+                causal_ids = self.ids("E101")
+                proposal = self.m.EconomicsRevisionProposal(
+                    initial, revised, reason, causal_ids
+                )
+                result = self.evaluate(economics_proposal=proposal)
+                record = result.economics_revision
+                self.assertIsInstance(record, self.m.EconomicsGateRevisionRecord)
+                self.assertIs(record.initial_result, initial)
+                self.assertIs(record.revised_result, revised)
+                self.assertEqual(record.reason, reason)
+                self.assertEqual(record.causal_evidence_ids, causal_ids)
 
     def test_economics_missing_to_concrete_threshold_change_is_rejected(self):
         initial = self.economics_result(minimum=None, dynamic=None, outcome="UNRESOLVED")
@@ -617,6 +874,71 @@ class AuthoritativeGateTests(RedTeamRevisionTestBase):
             real, forged, "forged economics result", self.ids("E101")
         )
         self.assertIsNone(self.evaluate(economics_proposal=forged_proposal).economics_revision)
+
+    def test_forged_economics_closed_values_are_local_and_valid_score_survives(self):
+        initial = self.economics_result()
+        valid_score = self.m.ScoreRevisionProposal(
+            self.sd.Dimension("Competition"),
+            self.score(Decimal("90"), evidence_ids=("E101",)),
+            "valid independent revision",
+            self.ids("E101"),
+        )
+        revised = self.economics_result(outcome="BELOW_TARGET")
+        cases = []
+
+        for field_name in ("minimum_viability_gate", "dynamic_target_gate"):
+            gate = getattr(revised, field_name)
+            forged_reason = self.forged_value(self.economics.ReasonCode, "INVALID")
+            forged_gate = self.forged_dataclass(gate, reasons=(forged_reason,))
+            cases.append(self.forged_dataclass(revised, **{field_name: forged_gate}))
+
+        forged_gate_outcome = self.forged_value(self.economics.GateOutcome, "INVALID")
+        cases.append(
+            self.forged_dataclass(
+                revised,
+                minimum_viability_gate=self.forged_dataclass(
+                    revised.minimum_viability_gate, outcome=forged_gate_outcome
+                ),
+            )
+        )
+        cases.append(
+            self.forged_dataclass(
+                revised,
+                outcome=self.forged_value(self.economics.EconomicsOutcome, "INVALID"),
+            )
+        )
+        cases.append(
+            self.forged_dataclass(
+                revised,
+                contribution_profit=self.forged_dataclass(
+                    revised.contribution_profit,
+                    status=self.forged_value(self.economics.Status, "INVALID"),
+                ),
+            )
+        )
+        cases.append(
+            self.forged_dataclass(
+                revised,
+                contribution_margin=self.forged_dataclass(
+                    revised.contribution_margin,
+                    confidence=self.forged_value(self.economics.Confidence, "INVALID"),
+                ),
+            )
+        )
+
+        for revised_with_forgery in cases:
+            with self.subTest(revised=revised_with_forgery):
+                proposal = self.m.EconomicsRevisionProposal(
+                    initial,
+                    revised_with_forgery,
+                    "forged economics result",
+                    self.ids("E101"),
+                )
+                result = self.evaluate(
+                    score_proposals=(valid_score,), economics_proposal=proposal
+                )
+                self.assertIsNone(result.economics_revision)
+                self.assertEqual(result.revised_scores.competition.score, Decimal("90"))
 
     def test_economics_change_requires_declared_current_run_causal_ids(self):
         proposal = self.m.EconomicsRevisionProposal(
