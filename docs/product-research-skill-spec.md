@@ -18,7 +18,7 @@ The core principle is:
 
 > No evidence, no conclusion.
 
-This document describes the broader v1 target workflow. Current deterministic boundaries include the source-agnostic `product_research/research_orchestration.py` control plane for explicit plans, injected acquisition, raw-finding normalization, and execution coverage, the fixed five-family `product_research/research_adapters.py` composition for configured acquisition callables, the explicit read-only `product_research/competition.py`, `product_research/supply_chain.py`, and `product_research/brand_content.py` boundaries for caller-declared inputs over existing Evidence, and the explicit normalized-input scoring boundary: `product_research/scoring_decision.py` executes the frozen eight-dimension weights, core thresholds, upstream gate precedence, and explicit analytical decision policy. `RawFinding` is non-durable, existing `Evidence` is the sole normalized contract, and family composition stops at the acquisition-result/raw-finding boundary. The repository still does not implement provider-backed research acquisition, qualitative score generation, Red Team review, reporting, or the full end-to-end workflow.
+This document describes the broader v1 target workflow. Current deterministic boundaries include the source-agnostic `product_research/research_orchestration.py` control plane for explicit plans, injected acquisition, raw-finding normalization, and execution coverage, the fixed five-family `product_research/research_adapters.py` composition for configured acquisition callables, the explicit read-only Phase 6 boundaries for caller-declared inputs over existing Evidence, the evidence-grounded `product_research/initial_scoring.py` bridge for explicit Agent/caller judgments and retained Unit Economics values, and the explicit normalized-input scoring boundary: `product_research/scoring_decision.py` executes the frozen eight-dimension weights, core thresholds, upstream gate precedence, and explicit analytical decision policy. `RawFinding` is non-durable, existing `Evidence` is the sole normalized contract, and family composition stops at the acquisition-result/raw-finding boundary. The repository still does not implement provider-backed research acquisition, automatic qualitative judgment generation, Red Team review, reporting, or the full end-to-end workflow.
 
 All material conclusions must be supported by verifiable evidence. If evidence is insufficient, stale, conflicting, or estimated, the Skill must say so explicitly rather than filling gaps with unsupported assumptions.
 
@@ -726,7 +726,7 @@ Risk Gate always takes precedence over aggregate score.
 
 # 19. Eight-Dimension Scoring Model
 
-For normalized score inputs, execution belongs to `product_research/scoring_decision.py`. The module accepts exactly the eight fixed dimensions below in policy order and preserves missing scores as unresolved; evidence-backed qualitative score generation remains an upstream analysis responsibility.
+For normalized score inputs, execution belongs to `product_research/scoring_decision.py`. The module accepts exactly the eight fixed dimensions below in policy order and preserves missing scores as unresolved. Before it, `product_research/initial_scoring.py` validates explicit Agent/caller qualitative judgments against owned Phase 6 support and maps retained Unit Economics Contribution Margin; it does not generate those judgments.
 
 The base weighting model is:
 
@@ -786,7 +786,7 @@ The Skill must not adjust weights merely to produce a preferred outcome. The det
 
 # 21. Quantitative vs LLM Scoring
 
-The executor performs only the deterministic execution of already normalized scores. It does not call an LLM, generate qualitative scores, or infer scores from Evidence.
+The executor performs only the deterministic execution of already normalized scores. Initial Scoring validates explicit Agent/caller judgments but does not call an LLM, generate qualitative judgments, or infer scores from Evidence text.
 
 Use a hybrid model.
 
@@ -809,7 +809,7 @@ Use formulas or scripts where appropriate for:
 
 ## Evidence-Based LLM Scoring
 
-Use LLM analysis for dimensions such as:
+The Agent/caller may use its available reasoning capability for dimensions such as:
 
 - Pain-point intensity
 - Differentiation opportunity
@@ -818,7 +818,7 @@ Use LLM analysis for dimensions such as:
 - Competitive entry opportunity
 - Unmet needs
 
-LLM-generated scores must still cite evidence.
+Any caller-produced judgment must still cross the explicit Initial Scoring boundary with a finite Decimal score, Confidence, and relevant Evidence IDs. Rationale is review context only; unsupported judgments remain unresolved.
 
 Example:
 
@@ -1253,7 +1253,7 @@ Uncertainty is part of the analysis rather than a failure of the analysis.
 
 # 38. v1 Success Criteria
 
-These are full-workflow target criteria, not a claim that the current repository can already perform every listed stage. The current repository implements the source-agnostic orchestration control plane, fixed family-level adapter composition, explicit read-only Market Demand, Competition, VOC, and Supply Chain interpretations over existing normalized Evidence, and the explicit deterministic scoring and analytical decision boundaries described above; provider-backed research acquisition, score generation, Red Team, reporting, and end-to-end evaluation remain unavailable.
+These are full-workflow target criteria, not a claim that the current repository can already perform every listed stage. The current repository implements the source-agnostic orchestration control plane, fixed family-level adapter composition, explicit read-only Market Demand, Competition, VOC, and Supply Chain interpretations over existing normalized Evidence, and the explicit deterministic scoring and analytical decision boundaries described above; provider-backed research acquisition, automatic qualitative judgment generation, Red Team, reporting, and end-to-end evaluation remain unavailable.
 
 The v1 Skill is considered successful when it can take a candidate product and reliably:
 

@@ -15,6 +15,8 @@ Evaluate a candidate product supplied by the user. Do not use this version to di
 - Missing evidence must not be converted into assumed facts. Research it, use a bounded evidence-supported `Estimated` value, or mark it `Unknown`.
 - When reliable sources conflict, surface the conflict, compare quality and freshness, and reduce confidence when unresolved. Do not hide adverse evidence.
 - Run `Risk Gate` and `Unit Economics Gate` independently of the weighted score. Aggregate scoring cannot override a fatal risk or failed economics gate.
+- After Phase 6 results and Unit Economics are available, the Agent/caller may submit explicit qualitative judgments to `product_research/initial_scoring.py`; it validates ownership, Evidence-ID traceability, nested uncertainty, and Confidence ceilings, then emits the existing eight-slot `DimensionScores`. It does not generate or infer qualitative judgments.
+- `product_research/initial_scoring.py` maps retained Contribution Margin relative to the caller-owned Minimum Viability and Dynamic Target thresholds using its frozen Decimal rubric; it does not recalculate economics or rerun either gate.
 - When normalized scores, explicit adjustments, upstream gate results, and an explicit GO threshold are available, route deterministic scoring and analytical decision execution to `product_research/scoring_decision.py`; it does not generate scores or policy inputs.
 
 ## Reference Routing
@@ -36,6 +38,7 @@ Read each reference before performing its stage:
 | Explicit Brand / Content propositions, independently assessed findings, five-aspect coverage, and traceability from existing Evidence | [product_research/brand_content.py](product_research/brand_content.py) |
 | Explicit Risk & Compliance propositions, evidence-grounded findings, caller-owned required-area coverage, and the decision-facing Risk Gate state from existing Evidence | [product_research/risk_compliance.py](product_research/risk_compliance.py) |
 | Deterministic Unit Economics calculation and gate execution | [product_research/unit_economics.py](product_research/unit_economics.py) |
+| Evidence-grounded initial score normalization | [product_research/initial_scoring.py](product_research/initial_scoring.py) |
 | Normalized eight-dimension scoring, thresholds, and analytical decisions | [product_research/scoring_decision.py](product_research/scoring_decision.py) and [references/scoring-policy.md](references/scoring-policy.md) |
 | Risk and Unit Economics gates | [references/gates.md](references/gates.md) |
 | Final output | [references/report-contract.md](references/report-contract.md) |
@@ -57,7 +60,7 @@ Follow this order:
 9. Analyze Supply Chain and Fulfillment.
 10. Evaluate Brand Potential.
 11. Evaluate Content Potential.
-12. Score the eight dimensions.
+12. Produce explicit Agent/caller qualitative judgments where relevant Evidence supports them, then pass Phase 6 results, Unit Economics, and those judgments through Initial Scoring.
 13. Check core-dimension thresholds.
 14. Run Red Team Review.
 15. Revise scores when warranted by evidence.
@@ -67,7 +70,7 @@ Do not skip an earlier stage merely because a later-stage answer appears intuiti
 
 ## Unimplemented Capabilities
 
-This phase provides the shared structural Evidence representation, deterministic Evidence Policy validation, deterministic Evidence Assessment with explicit per-record stances, independence groups, missing information, conflict preservation, and claim-level Confidence ceilings, explicit read-only Market Demand, Competition, VOC, Supply Chain, Brand / Content, and Risk & Compliance interpretations from existing Evidence, deterministic Unit Economics calculation from explicit normalized inputs with caller-supplied thresholds and fail-closed gate results, deterministic scoring/analytical decision execution from explicit normalized inputs, a source-agnostic orchestration boundary for injected research planning, acquisition, and Evidence normalization, and a fixed five-family adapter composition in `product_research/research_adapters.py`. The VOC, Supply Chain, Brand / Content, and Risk & Compliance boundaries accept only caller-declared propositions and do not infer meaning from Evidence. `RawFinding` is an acquisition-only, non-durable value; existing `Evidence` remains the sole normalized contract, and configured family adapters stop at `AcquisitionResult` / `RawFinding`. Concrete provider-backed adapters, marketplace or supplier scrapers, provider-backed acquisition, provider-backed regulation, patent, or trademark search, automatic risk scanning, qualitative score generation, automatic weight selection, automatic VOC clustering, Red Team automation, persistence, reporting, and the full provider-backed workflow remain unavailable. Neither boundary performs external research by itself.
+This phase provides the shared structural Evidence representation, deterministic Evidence Policy validation, deterministic Evidence Assessment with explicit per-record stances, independence groups, missing information, conflict preservation, and claim-level Confidence ceilings, explicit read-only Market Demand, Competition, VOC, Supply Chain, Brand / Content, and Risk & Compliance interpretations from existing Evidence, deterministic Unit Economics calculation from explicit normalized inputs with caller-supplied thresholds and fail-closed gate results, evidence-grounded Initial Scoring from explicit Agent/caller judgments and retained Unit Economics values, deterministic scoring/analytical decision execution from explicit normalized inputs, a source-agnostic orchestration boundary for injected research planning, acquisition, and Evidence normalization, and a fixed five-family adapter composition in `product_research/research_adapters.py`. The VOC, Supply Chain, Brand / Content, and Risk & Compliance boundaries accept only caller-declared propositions and do not infer meaning from Evidence. `RawFinding` is an acquisition-only, non-durable value; existing `Evidence` remains the sole normalized contract, and configured family adapters stop at `AcquisitionResult` / `RawFinding`. Concrete provider-backed adapters, marketplace or supplier scrapers, provider-backed acquisition, provider-backed regulation, patent, or trademark search, automatic risk scanning, automatic qualitative judgment generation, automatic weight selection, automatic VOC clustering, Red Team automation, persistence, reporting, and the full provider-backed workflow remain unavailable. Neither boundary performs external research by itself.
 
 Use only tools actually available in the current environment. Never claim to have accessed a source, collected data, run a calculation, or completed a workflow stage when that capability was unavailable. In that case:
 

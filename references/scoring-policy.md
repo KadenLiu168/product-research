@@ -4,6 +4,23 @@ Score only after evidence collection and both gate evaluations. Each dimension s
 
 For explicit normalized inputs, [product_research/scoring_decision.py](../product_research/scoring_decision.py) owns score-shape validation, caller-supplied weight execution, aggregate calculation, core-threshold evaluation, explicit GO-policy evaluation, and the analytical labels. It does not generate qualitative scores, acquire or reassess Evidence, select Dynamic Weights, or justify a non-zero adjustment; those responsibilities remain upstream.
 
+## Evidence-Grounded Initial Scoring
+
+[product_research/initial_scoring.py](../product_research/initial_scoring.py) is the deterministic bridge from existing Phase 6 results, an existing `UnitEconomicsResult`, and explicit Agent/caller judgments to the existing eight-slot `DimensionScores`. It does not acquire Evidence, read Evidence text, rerun Policy/Assessment/analyzers, call a provider or LLM, calculate weights or aggregates, execute gate precedence, emit decision labels, or perform Red Team revision.
+
+The seven qualitative dimensions have fixed ownership: Market Demand uses a `POSITIVE` Market Demand result; Competition uses `ADEQUATE` Competition findings declared `MARKET_STRUCTURE`; Pain Points & Differentiation uses VOC findings plus Competition findings declared `POSITIONING` or `DIFFERENTIATION`; Supply Chain & Fulfillment uses Supply Chain findings; Brand Potential and Content Potential use matching Brand / Content finding dimensions; Risk & Compliance uses Risk findings only when caller-owned required-area coverage is complete. A judgment is concrete only when every cited ID is in relevant supported or adverse IDs, at least one relevant source is cited, and nested assessment conflict, insufficiency, material/critical missing information, unsupported findings, and excluded IDs do not make the support unresolved. Unrelated uncited gaps do not contaminate another dimension.
+
+The declared judgment Confidence must be at or below the weakest Confidence among all relevant cited sources; it is preserved rather than averaged or automatically downgraded. Invalid, duplicated, malformed, irrelevant, unsupported, or overconfident judgments use the canonical unresolved representation `DimensionScore(score=None, confidence=Low, evidence_ids=())`.
+
+Price & Profitability uses no qualitative fallback. When the retained Contribution Margin and both retained gate thresholds are finite, both retained actual margins equal the Contribution Margin, the economics outcome is not `UNRESOLVED`, the Dynamic Target is strictly greater than Minimum Viability, and the non-empty result-level and Contribution Margin Evidence-ID tuples are equal and canonical, its raw score is:
+
+```text
+100 * (Contribution Margin - Minimum Viability)
+    / (Dynamic Target - Minimum Viability)
+```
+
+The calculation uses a fresh 34-digit `ROUND_HALF_EVEN` Decimal context, clamps known out-of-band values to `0..100`, and applies no implicit quantization. Missing or incoherent values remain unresolved; a known margin mapping to `0` is not the same as unknown. Existing weights, core thresholds, Risk Gate precedence, Unit Economics Gate ownership, and downstream analytical decision policy remain unchanged.
+
 ## Base Weights
 
 | Dimension | Weight |

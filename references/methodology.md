@@ -26,6 +26,16 @@ Use [scoring-policy.md](scoring-policy.md) for weights, thresholds, and scoring 
 5. Analyze all eight dimensions, score only where evidence supports scoring, check core thresholds, and run an evidence-based Red Team review.
 6. Revise scores or confidence when contrary evidence warrants it, then report under [report-contract.md](report-contract.md).
 
+## Initial Scoring Bridge
+
+Initial Scoring is the narrow boundary between these structured results and the existing score executor. The Agent/caller owns qualitative judgment generation; each judgment must explicitly carry one qualitative dimension, a finite `Decimal` score from `0` through `100`, existing `Confidence`, and non-empty Evidence IDs. `rationale` is optional review context and never replaces Evidence IDs or affects scoring.
+
+`product_research/initial_scoring.py` accepts only Evidence IDs traceable through relevant supported or adverse IDs in existing Phase 6 findings/results. Ownership is fixed: Market Demand → positive Market Demand result; Competition → adequate Competition findings declared `MARKET_STRUCTURE`; Pain Points & Differentiation → VOC findings plus Competition `POSITIONING` / `DIFFERENTIATION`; Supply Chain & Fulfillment → Supply Chain findings; Brand Potential / Content Potential → matching Brand / Content finding dimensions; Risk & Compliance → Risk findings with complete required-area coverage. Excluded, unrelated, unknown, unsupported, conflicted, insufficient, materially or critically unresolved support remains unresolved.
+
+The boundary preserves the declared judgment Confidence only when it is no stronger than the weakest relevant cited source. Missing or malformed inputs produce the canonical unresolved slot (`score=None`, `Confidence=Low`, `Evidence IDs=()`); no unknown-to-zero or neutral fallback is permitted. Risk scoring does not alter `RiskGateState`, and Initial Scoring does not perform Red Team revision, weighting, aggregation, thresholds, labels, research, or reporting.
+
+Price & Profitability is the only quantitative mapping: for a coherent retained `UnitEconomicsResult`, calculate `100 * (Contribution Margin - Minimum Viability) / (Dynamic Target - Minimum Viability)` under a fresh 34-digit `ROUND_HALF_EVEN` Decimal context, clamp known values to `0..100`, and leave equal/missing/malformed thresholds, mismatched actual margins or Evidence IDs, unresolved economics, and missing margin values unresolved. The thresholds and economics ownership remain caller-owned by Unit Economics.
+
 ## Market Demand
 
 Validate demand with multiple signals rather than a single proxy:

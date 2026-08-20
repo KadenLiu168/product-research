@@ -572,6 +572,44 @@ These are the acceptance scenarios for the `unit-economics-engine` capability. T
 - **WHEN** both gates pass
 - **THEN** the capability returns `MEETS_TARGET` and traceable economics data without emitting a score, Risk outcome, or `GO` / `NO-GO` style final decision label
 
+## Initial Scoring Acceptance Scenarios
+
+These scenarios cover the explicit Agent-to-deterministic Initial Scoring handoff. The Agent/caller owns qualitative judgment generation; `product_research.initial_scoring` only validates normalized values, upstream ownership, traceability, and the frozen profitability rubric. It never acquires Evidence, reads Evidence text, reruns Assessment/analyzers, executes gates, calculates an aggregate, or performs Red Team revision.
+
+### Explicit qualitative handoff
+
+- **WHEN** the Agent supplies one normalized qualitative judgment with a declared dimension, finite standard-library `Decimal` score from `0` through `100`, existing Confidence, immutable Evidence-ID tuple, and optional rationale
+- **THEN** Initial Scoring validates the explicit fields without parsing rationale, invoking an LLM, or deciding a score from proposition text
+
+### Relevant Evidence selection
+
+- **WHEN** a judgment cites IDs in relevant supported/adverse findings under its ownership route
+- **THEN** the score may be emitted only after dimension prerequisites, nested Assessment sufficiency, and Confidence-ceiling validation pass
+
+- **WHEN** a judgment cites an unrelated, excluded, unknown, unsupported, or materially unresolved ID
+- **THEN** that dimension remains unresolved and no ID is accepted merely because it exists elsewhere in the run
+
+### Unsupported score withholding and Confidence non-inflation
+
+- **WHEN** an owned result is missing, Market Demand is not `POSITIVE`, Competition sampling is not `ADEQUATE`, Risk required-area coverage is incomplete, or the cited Assessment is conflicted/insufficient/materially unresolved
+- **THEN** only the affected dimension is withheld as `score=None`, `Confidence=Low`, `Evidence IDs=()`; unrelated valid dimensions remain independently evaluable
+
+- **WHEN** the Agent declares Confidence stronger than the weakest relevant cited source
+- **THEN** the score is withheld rather than silently downgraded, averaged, voted, or repaired; a lower declared Confidence is preserved
+
+### Risk / economics independence
+
+- **WHEN** a valid Risk dimension score coexists with `RiskGateState = FATAL`
+- **THEN** Initial Scoring preserves the score and leaves fatal-gate precedence to the existing scoring-decision executor
+
+- **WHEN** a valid retained Contribution Margin and caller-owned thresholds satisfy the frozen profitability rubric
+- **THEN** Price & Profitability is scored relative to those thresholds without recalculating economics, rerunning either gate, or using a qualitative fallback
+
+### No Red Team behavior
+
+- **WHEN** Initial Scoring is invoked
+- **THEN** it emits only the existing eight-slot initial `DimensionScores`; score revision, aggregate/threshold/decision execution, reporting, persistence, provider research, and Red Team findings remain unavailable
+
 ## Brand / Content Analysis Acceptance Scenarios
 
 These scenarios cover the explicit ECO-21 Brand Potential and Content Potential boundary in `product_research/brand_content.py`. The capability consumes caller-supplied normalized Evidence and fresh proposition-specific Assessment declarations; it does not acquire, infer, score, or decide.
