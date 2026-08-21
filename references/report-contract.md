@@ -1,10 +1,13 @@
 # Final Report Contract
 
-This is a downstream ECO-38 contract. Its structured input is the immutable Final Result from `product_research/end_to_end_workflow.py`; the ECO-37 coordinator does not render these sections or an Evidence Appendix.
+This is the downstream ECO-38 runtime contract. Its input is one immutable
+`EndToEndWorkflowResult` from `product_research/end_to_end_workflow.py` and its
+output is deterministic human-readable Markdown. The ECO-37 coordinator and
+all lower-level modules remain report-free.
 
-Produce an evidence-backed analysis, not a prescriptive action plan or an autonomous commercial decision.
+## Canonical Structure
 
-## Required Structure
+The report contains exactly these sections, in this order, once each:
 
 1. Executive Summary
 2. Market Demand
@@ -22,29 +25,94 @@ Produce an evidence-backed analysis, not a prescriptive action plan or an autono
 14. Final Analysis Label
 15. Evidence Appendix
 
-The Executive Summary must name the candidate product, target market, strongest evidence, largest weaknesses, gate status, overall score and confidence when supported, and the analytical label. Do not hide material risks for brevity.
+`UNAVAILABLE` is the stable marker for a value that is absent from the
+authoritative workflow result. A missing value is never rendered as zero,
+neutral, complete, or positive.
 
-## Scorecard
+## Authoritative State
 
-For each of the eight dimensions, include score, base weight, final weight when adjusted, weighted score, confidence, and supporting Evidence IDs. Those IDs reference records governed by the shared [`Evidence` contract](../product_research/evidence.py); downstream findings, scores, gates, and Red Team revisions must retain IDs rather than embedding an alternative Evidence structure. Surface core-threshold failures separately. Use unresolved markers rather than fabricated scores when evidence or calculation capability is missing.
+When Stage 16 contains `WorkflowFinalState`, the report uses its scores, Risk,
+Unit Economics, final weights, aggregate, core-threshold results, and
+`DecisionResult` label and reasons exactly. Stage 13's initial decision never
+substitutes for the final decision.
 
-## Final Analysis Label
+When Stage 16 is unavailable, accepted Stage 15 revisions are rendered as
+`LATEST-KNOWN`; otherwise available Stage 12/4/5 values are rendered as
+`INITIAL`. Latest-known and initial values are explicitly not final: final
+weights, aggregate, core results, and Final Analysis Label remain
+`UNAVAILABLE` without Stage 16.
 
-Use exactly one label when evidence supports it:
+## Analytical Sections and Scorecard
 
-- `GO`
-- `CONDITIONAL GO`
-- `RISK REVIEW`
-- `NO-GO`
+The eight analytical sections preserve the retained domain result fields,
+including outcomes, Confidence, findings, diagnostics, factors, coverage,
+missing or unknown state, supporting Evidence IDs, and adverse Evidence IDs.
+Evidence text is not interpreted by presentation.
 
-These are analysis labels only. `product-research` does not make the user's final business decision. A fatal Risk Gate maps to `NO-GO`; a material unresolved Risk Gate maps to `RISK REVIEW`. Do not issue an unqualified `GO` when critical evidence, a gate result, or a core threshold remains unresolved.
+The Scorecard contains exactly the eight canonical dimensions in canonical
+order. It renders the authoritative score or `UNAVAILABLE`, base and final
+weights, per-dimension Confidence, and supporting Evidence IDs. Core-threshold
+results, failed or unresolved core dimensions, and the authoritative aggregate
+are copied from Stage 16 when available.
 
-## Evidence Appendix
+The only permitted numeric presentation derivation is:
 
-Include at least:
+```text
+weighted contribution = score * final weight / Decimal("100")
+```
 
-| ID | Claim | Evidence | Source | Date | Tier | Status | Confidence |
-|---|---|---|---|---|---|---|---|
-| E001 | — | — | — | — | — | `Observed` / `Estimated` / `Calculated` / `Unknown` | `High` / `Medium` / `Low` |
+It uses the repository's 34-digit `ROUND_HALF_EVEN` Decimal context, never
+mutates or replaces authoritative state, and never creates an aggregate or
+decision. When all contributions and an authoritative aggregate exist, their
+Decimal sum must equal that aggregate; otherwise reporting raises a
+deterministic input-consistency error.
 
-Use unique Evidence IDs and reference them from material claims, scores, gate findings, and Red Team revisions. `Key Evidence` highlights the most decision-relevant records; `Key Uncertainties` states missing or conflicting evidence and its effect on confidence or labels. Report producers and consumers should use the shared Evidence ID boundary instead of copying a parallel core record.
+## Gates, Label, and Red Team History
+
+Final Risk, Unit Economics, and Final Analysis Label are copied from the
+authoritative post-Red-Team objects. Accepted score, Risk, and Unit Economics
+revisions retain their before value, after value, reason, and causal Evidence
+IDs. Rejected or absent proposals are not reinterpreted.
+
+The Executive Summary exposes subject, final-state facts, gate state, core
+state, material workflow incompleteness, key decision Evidence IDs, and
+accepted revisions. It does not create a recommendation, an overall-report
+Confidence, an Evidence-strength ranking, or a cross-domain severity order.
+
+## Key Evidence and Key Uncertainties
+
+Key Evidence is a deterministic membership projection of current-run Evidence
+IDs materially referenced by authoritative scores, Risk, Unit Economics,
+domain findings, accepted Red Team history, or the final decision. The union is
+deduplicated and rendered in Evidence-ID order; membership is not a rank.
+Unreferenced current-run records remain in the Appendix.
+
+Key Uncertainties contains only explicit workflow `UNRESOLVED`, `BLOCKED`, or
+`FAILED` state, missing or unknown domain state, existing diagnostics/factors/
+reasons, unresolved scores or core thresholds, and unresolved Risk or Unit
+Economics state. Entries use canonical structural order and are not compared
+using an invented severity model.
+
+## Evidence Appendix and Traceability
+
+Every Evidence reference selected for presentation must resolve inside the
+current run's normalized Stage 3 Evidence universe. Dangling or foreign-run
+IDs fail closed; reporting does not drop, renumber, clone, or fabricate them.
+
+The Appendix contains exactly one entry for every normalized Stage 3 `Evidence`
+record, in Evidence-ID order, and no other entries. It preserves ID, claim,
+Evidence content, source, observed timestamp, tier, status, and Confidence.
+Markdown/control-character escaping is deterministic and lossless with respect
+to those values. An empty Evidence universe is rendered explicitly.
+
+## Incomplete and Side-Effect-Free Rendering
+
+Well-formed results remain reportable for `COMPLETE`, `UNRESOLVED`, `BLOCKED`,
+and `FAILED` stage states. Stage statuses and retained failure or blocking
+reasons remain visible; absence never becomes a successful conclusion.
+
+Equivalent structured inputs produce byte-identical output. Rendering performs
+no provider or network access, clock or randomness reads, persistence, LLM or
+asynchronous work, upstream policy execution, or report-specific Evidence
+acquisition. It is a one-way presentation boundary downstream of the
+structured workflow.

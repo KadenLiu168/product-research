@@ -24,13 +24,13 @@ Use [scoring-policy.md](scoring-policy.md) for weights, thresholds, and scoring 
 3. Collect evidence under [evidence-policy.md](evidence-policy.md), then normalize claims, dates, sources, statuses, and confidence.
 4. Evaluate gates before treating aggregate commercial attractiveness as actionable.
 5. Analyze all eight dimensions, score only where evidence supports scoring, check core thresholds, and prepare explicit Evidence-backed Red Team inputs.
-6. Apply accepted revisions, resolve the final authoritative state, and consume the structured result downstream; report rendering remains outside this deterministic endpoint.
+6. Apply accepted revisions, resolve the final authoritative state, and pass the structured result to the downstream deterministic report boundary.
 
 ## Deterministic End-to-End Endpoint
 
 When all inputs are explicit and normalized, `product_research/end_to_end_workflow.py` runs the fixed 16-stage coordinator: subject validation; research plan; research Evidence; Risk analysis and Gate; Unit Economics and Gates; Market Demand; Competition; VOC and Differentiation; Supply Chain and Fulfillment; Brand Potential; Content Potential; Initial Scoring; initial scoring decision and core thresholds; Red Team input acceptance; Red Team revision; and post-Red-Team authoritative-state resolution plus final scoring decision.
 
-The coordinator retains one immutable ordered record for every stage, including unresolved, blocked, or failed stages, and reuses the existing Evidence, analysis, Gate, score, Red Team, and decision values without conversion or a second policy engine. Missing information remains unresolved or blocks only the dependent boundary. Its Stage 16 output is a structured Final Result for downstream consumers; it does not render the human-readable report or Evidence Appendix. Those reporting capabilities are downstream ECO-38 work and are unavailable until implemented.
+The coordinator retains one immutable ordered record for every stage, including unresolved, blocked, or failed stages, and reuses the existing Evidence, analysis, Gate, score, Red Team, and decision values without conversion or a second policy engine. Missing information remains unresolved or blocks only the dependent boundary. Its Stage 16 output is a structured Final Result for downstream consumers; `product_research/final_report_generation.py` renders the canonical 15-section human-readable report and complete Evidence Appendix from that result without rerunning upstream policy.
 
 ## Initial Scoring Bridge
 

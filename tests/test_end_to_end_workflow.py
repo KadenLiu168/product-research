@@ -1043,8 +1043,11 @@ class WorkflowArchitectureTests(WorkflowTestBase):
         self.assertNotIn("llm", workflow_source.lower())
         self.assertNotIn("async", workflow_source.lower())
         for path in (root / "product_research").glob("*.py"):
-            if path.name != "end_to_end_workflow.py":
+            if path.name not in ("end_to_end_workflow.py", "final_report_generation.py"):
                 self.assertNotIn("end_to_end_workflow", path.read_text())
+        report_source = (root / "product_research" / "final_report_generation.py").read_text()
+        self.assertIn("end_to_end_workflow", report_source)
+        self.assertNotIn("final_report_generation", workflow_source)
 
     def test_research_orchestration_remains_the_only_research_to_evidence_boundary(self):
         root = Path(__file__).resolve().parents[1]

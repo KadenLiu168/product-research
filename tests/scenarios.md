@@ -726,4 +726,37 @@ These scenarios cover the fixed deterministic coordinator in `product_research/e
 
 - **WHEN** Stage 16 completes
 - **THEN** the result exposes Evidence, analyses, Gate history, scores, Red Team history, and the final analytical decision as immutable structured values
-- **AND** human-readable report and Evidence Appendix generation remains downstream ECO-38 work and is unavailable in this workflow
+- **AND** the coordinator remains report-free; the downstream ECO-38 renderer consumes the structured result separately
+
+## ECO-38 Final Report Generation Acceptance Scenarios
+
+These scenarios cover `product_research/final_report_generation.py`, the
+deterministic downstream boundary after ECO-37. The renderer consumes one
+well-formed `EndToEndWorkflowResult`; it does not acquire Evidence, execute
+upstream policy, persist state, call providers or an LLM, or implement ECO-39
+evaluation behavior.
+
+### Canonical complete and incomplete reports
+
+- **RED WHEN** a complete result is submitted before the ECO-38 renderer exists
+- **THEN** the focused contract tests fail at the missing reporting import rather than at fixture construction
+- **GREEN WHEN** a complete result is rendered
+- **THEN** the Markdown contains exactly the canonical 15 sections, exactly eight ordered Scorecard dimensions, final post-Red-Team values, authoritative weights/aggregate/core state, per-dimension Confidence, and Evidence IDs
+- **WHEN** a result is `UNRESOLVED`, `BLOCKED`, or `FAILED`, or Stage 16 is absent
+- **THEN** the same 15 sections remain present, status and retained reasons remain visible, latest-known or initial values are labeled as such, and unavailable values are not converted to zero or a positive conclusion
+
+### Traceability and no fabrication
+
+- **WHEN** a report reference points to an Evidence ID outside the current Stage 3 universe
+- **THEN** rendering fails closed with a deterministic traceability error and does not allocate, renumber, clone, or omit the reference
+- **WHEN** the workflow retains normalized Evidence
+- **THEN** the Evidence Appendix renders every record exactly once in Evidence-ID order, preserving adverse, multiline, Unicode, and control-character-sensitive content
+- **WHEN** Key Evidence is rendered
+- **THEN** it is the deterministic non-ranked membership union of existing authoritative references; unreferenced records remain in the complete Appendix
+
+### Boundary and determinism
+
+- **WHEN** equivalent workflow results are rendered twice
+- **THEN** output bytes are identical and no provider, network, clock, randomness, persistence, asynchronous, LLM, or upstream policy executor is called
+- **WHEN** lower-level modules and `end_to_end_workflow.py` are inspected
+- **THEN** they do not import reporting, and the repository contains no ECO-39 evaluation suite or reporting-specific scoring policy
