@@ -42,12 +42,31 @@ When Stage 16 is unavailable, accepted Stage 15 revisions are rendered as
 weights, aggregate, core results, and Final Analysis Label remain
 `UNAVAILABLE` without Stage 16.
 
+## Executive Summary and Presentation Labels
+
+The Executive Summary retains the candidate, target market, state source,
+final label, aggregate, Risk, Unit Economics, core state, accepted Red Team
+state, and Key Decision `Evidence IDs` when authoritative. When every stage is
+complete it emits one `Workflow Status: COMPLETE` line. Otherwise it emits
+only the non-complete `UNRESOLVED`, `BLOCKED`, and `FAILED` stage records in canonical order,
+including retained failure kinds and `blocked_by` dependencies.
+
+Analytical sections use explicit fixed reader-facing labels for the supported
+field registry. They never expose internal `snake_case` names, reflect over
+arbitrary attributes, or dynamically humanize fields. A missing value remains
+`UNAVAILABLE`.
+
 ## Analytical Sections and Scorecard
 
 The eight analytical sections preserve the retained domain result fields,
 including outcomes, Confidence, findings, diagnostics, factors, coverage,
-missing or unknown state, supporting Evidence IDs, and adverse Evidence IDs.
-Evidence text is not interpreted by presentation.
+missing or unknown state, supporting Evidence IDs, adverse Evidence IDs, and
+excluded Evidence IDs. Each retained finding is rendered once as a compact,
+ordered field group containing every applicable proposition or text, outcome,
+dimension/category/area/aspect, Confidence, lineage, factors, diagnostics, and
+Evidence IDs. Values remain authoritative and in input order; presentation
+does not rank, summarize, or reinterpret them. Evidence text is not
+interpreted by presentation.
 
 The Scorecard contains exactly the eight canonical dimensions in canonical
 order. It renders the authoritative score or `UNAVAILABLE`, base and final
@@ -72,7 +91,11 @@ deterministic input-consistency error.
 Final Risk, Unit Economics, and Final Analysis Label are copied from the
 authoritative post-Red-Team objects. Accepted score, Risk, and Unit Economics
 revisions retain their before value, after value, reason, and causal Evidence
-IDs. Rejected or absent proposals are not reinterpreted.
+IDs through type-specific transitions. Score transitions contain dimension,
+score and available Confidence transitions; Risk transitions contain the Risk
+Gate before and after as the authoritative Risk Gate transition; Unit Economics transitions contain outcome, Minimum Viability Gate, and Dynamic Target Gate before and after. Complete Risk and
+Unit Economics objects are not serialized as revision output. Rejected or
+absent proposals are not reinterpreted.
 
 The Executive Summary exposes subject, final-state facts, gate state, core
 state, material workflow incompleteness, key decision Evidence IDs, and
@@ -90,8 +113,9 @@ Unreferenced current-run records remain in the Appendix.
 Key Uncertainties contains only explicit workflow `UNRESOLVED`, `BLOCKED`, or
 `FAILED` state, missing or unknown domain state, existing diagnostics/factors/
 reasons, unresolved scores or core thresholds, and unresolved Risk or Unit
-Economics state. Entries use canonical structural order and are not compared
-using an invented severity model.
+Economics state. Known fields use the same fixed reader-facing labels as the
+analytical projection. Entries use canonical structural order and are not
+compared using an invented severity model.
 
 ## Evidence Appendix and Traceability
 
@@ -109,7 +133,9 @@ to those values. An empty Evidence universe is rendered explicitly.
 
 Well-formed results remain reportable for `COMPLETE`, `UNRESOLVED`, `BLOCKED`,
 and `FAILED` stage states. Stage statuses and retained failure or blocking
-reasons remain visible; absence never becomes a successful conclusion.
+reasons remain visible; absence never becomes a successful conclusion. The
+complete Evidence Appendix remains lossless and contains every normalized
+Stage 3 record exactly once, including adverse Evidence.
 
 Equivalent structured inputs produce byte-identical output. Rendering performs
 no provider or network access, clock or randomness reads, persistence, LLM or

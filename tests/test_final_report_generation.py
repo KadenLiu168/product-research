@@ -6,6 +6,7 @@ import importlib
 import unittest
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 
@@ -251,6 +252,76 @@ class FinalReportContractTests(FinalReportTestBase):
         self.assertIn("Evidence IDs: E002", report)
         self.assertIn("Aggregate: 82", report)
 
+    def test_complete_summary_uses_one_status_line_and_retains_authoritative_facts(self):
+        report = self.report.render_final_report(self.complete_result())
+        summary = report.split("## 2. Market Demand", 1)[0].split(
+            "## 1. Executive Summary", 1
+        )[1]
+
+        self.assertIn("- Workflow Status: COMPLETE", summary)
+        self.assertNotIn("SUBJECT_VALIDATION: COMPLETE", summary)
+        self.assertNotIn("FINAL_DECISION: COMPLETE", summary)
+        for expected in (
+            "Candidate Product: portable blender",
+            "Target Market: United States",
+            "Workflow State Source: FINAL",
+            "Final Analysis Label: GO",
+            "Aggregate: 82",
+            "Risk Gate: CLEAR",
+            "Unit Economics: MEETS_TARGET",
+            "Accepted Red Team Changes: 2",
+            "Key Decision Evidence IDs: E001, E002",
+        ):
+            self.assertIn(expected, summary)
+
+    def test_incomplete_summary_lists_only_non_complete_stages_with_detail(self):
+        result = self.complete_result()
+        records = list(result.stages)
+        unresolved_stage = self.workflow.WorkflowStage.RESEARCH_EVIDENCE
+        blocked_stage = self.workflow.WorkflowStage.UNIT_ECONOMICS
+        failed_stage = self.workflow.WorkflowStage.FINAL_DECISION
+        records[tuple(self.workflow.WorkflowStage).index(unresolved_stage)] = (
+            self.workflow.WorkflowStageResult(
+                unresolved_stage,
+                self.workflow.WorkflowStageStatus.UNRESOLVED,
+                output=result.stage(unresolved_stage).output,
+            )
+        )
+        records[tuple(self.workflow.WorkflowStage).index(blocked_stage)] = (
+            self.workflow.WorkflowStageResult(
+                blocked_stage,
+                self.workflow.WorkflowStageStatus.BLOCKED,
+                output=result.stage(blocked_stage).output,
+                blocked_by=(unresolved_stage, self.workflow.WorkflowStage.RISK_COMPLIANCE),
+            )
+        )
+        records[tuple(self.workflow.WorkflowStage).index(failed_stage)] = (
+            self.workflow.WorkflowStageResult(
+                failed_stage,
+                self.workflow.WorkflowStageStatus.FAILED,
+                failure_kind=self.workflow.WorkflowFailureKind.EXECUTION_ERROR,
+            )
+        )
+        report = self.report.render_final_report(
+            self.workflow.EndToEndWorkflowResult(result.subject, tuple(records))
+        )
+        summary = report.split("## 2. Market Demand", 1)[0].split(
+            "## 1. Executive Summary", 1
+        )[1]
+        status_lines = [line for line in summary.splitlines() if line.startswith("  - ")]
+
+        self.assertIn("- Workflow Status: INCOMPLETE", summary)
+        self.assertEqual(
+            [line.split(":", 1)[0].removeprefix("  - ") for line in status_lines],
+            [unresolved_stage.value, blocked_stage.value, failed_stage.value],
+        )
+        self.assertIn("RESEARCH_EVIDENCE: UNRESOLVED", summary)
+        self.assertIn("UNIT_ECONOMICS: BLOCKED", summary)
+        self.assertIn("blocked_by=RESEARCH_EVIDENCE, RISK_COMPLIANCE", summary)
+        self.assertIn("FINAL_DECISION: FAILED; failure=EXECUTION_ERROR", summary)
+        self.assertNotIn("SUBJECT_VALIDATION: COMPLETE", summary)
+        self.assertNotIn("MARKET_DEMAND: COMPLETE", summary)
+
     def test_weighted_contribution_is_decimal_exact_and_never_creates_missing_aggregate(self):
         complete = self.complete_result()
         report = self.report.render_final_report(complete)
@@ -307,6 +378,12 @@ class FinalReportContractTests(FinalReportTestBase):
         self.assertEqual(appendix.count("| E002 |"), 1)
         self.assertEqual(appendix.count("| E003 |"), 1)
         self.assertIn("Adverse\\nvalue \\| Ω\\x1b", appendix)
+        appendix_ids = {
+            line.split("|", 2)[1].strip()
+            for line in appendix.splitlines()
+            if line.startswith("| E")
+        }
+        self.assertEqual(appendix_ids, {"E001", "E002", "E003"})
 
         final_stage = self.complete_result().stage(self.workflow.WorkflowStage.FINAL_DECISION)
         scores = dataclasses.replace(
@@ -445,12 +522,245 @@ class FinalReportContractTests(FinalReportTestBase):
             "## 10. Scorecard", 1
         )[0].split("## 9. Risk & Compliance", 1)[1]
         for expected in (
-            "area=REGULATION",
-            "proposition=Regulatory status is supported.",
-            "excluded=E003",
-            "diagnostics=ASSESSMENT_NOT_SUPPORTED",
+            "Area: REGULATION",
+            "Proposition: Regulatory status is supported.",
+            "Excluded Evidence: E003",
+            "Diagnostics: ASSESSMENT_NOT_SUPPORTED",
         ):
             self.assertIn(expected, risk_section)
+        for internal_name in (
+            "required_areas",
+            "supported_required_areas",
+            "unresolved_required_areas",
+            "missing_required_areas",
+        ):
+            self.assertNotIn(internal_name, risk_section)
+
+    def test_analytical_findings_use_fixed_labels_and_preserve_compact_input_order(self):
+        complete = self.complete_result()
+        finding_one = SimpleNamespace(
+            dimension="Market Demand",
+            aspect="DEMAND",
+            category="PRIMARY",
+            area="MARKET",
+            proposition="First finding",
+            outcome="SUPPORTED",
+            supported_classification="NORMAL",
+            confidence="High",
+            supporting_ids=(self.eid("E001"),),
+            adverse_ids=(self.eid("E002"),),
+            excluded_ids=(self.eid("E003"),),
+            prevalence="COMMON",
+            prevalence_supporting_ids=(self.eid("E001"),),
+            scope="GLOBAL",
+            scope_supporting_ids=(self.eid("E002"),),
+            factors=("FACTOR_ONE",),
+            diagnostics=("DIAGNOSTIC_ONE",),
+        )
+        finding_two = SimpleNamespace(
+            dimension="Market Demand",
+            aspect="DEMAND",
+            category="SECONDARY",
+            area="MARKET",
+            proposition="Second finding",
+            outcome="UNKNOWN",
+            supported_classification=None,
+            confidence="Low",
+            supporting_ids=(),
+            adverse_ids=(),
+            excluded_ids=(),
+            prevalence=None,
+            prevalence_supporting_ids=(),
+            scope=None,
+            scope_supporting_ids=(),
+            factors=("FACTOR_TWO",),
+            diagnostics=("DIAGNOSTIC_TWO",),
+        )
+        output = SimpleNamespace(
+            conclusion="SUPPORTED",
+            sample_limitations=("SMALL_SAMPLE",),
+            factors=("FACTOR_OUTPUT",),
+            diagnostics=("DIAGNOSTIC_OUTPUT",),
+            findings=(finding_one, finding_two),
+        )
+        stage = complete.stage(self.workflow.WorkflowStage.MARKET_DEMAND)
+        stages = list(complete.stages)
+        stages[tuple(self.workflow.WorkflowStage).index(stage.stage)] = dataclasses.replace(
+            stage, output=output
+        )
+        report = self.report.render_final_report(
+            dataclasses.replace(complete, stages=tuple(stages))
+        )
+        section = report.split("## 3. Competition", 1)[0].split(
+            "## 2. Market Demand", 1
+        )[1]
+
+        for expected in (
+            "Conclusion: SUPPORTED",
+            "Sample Limitations: SMALL_SAMPLE",
+            "Factors: FACTOR_OUTPUT",
+            "Diagnostics: DIAGNOSTIC_OUTPUT",
+            "Dimension: Market Demand",
+            "Aspect: DEMAND",
+            "Category: PRIMARY",
+            "Area: MARKET",
+            "Proposition: First finding",
+            "Outcome: SUPPORTED",
+            "Supported Classification: NORMAL",
+            "Confidence: High",
+            "Supporting Evidence: E001",
+            "Adverse Evidence: E002",
+            "Excluded Evidence: E003",
+            "Prevalence: COMMON",
+            "Prevalence Supporting Evidence: E001",
+            "Scope: GLOBAL",
+            "Scope Supporting Evidence: E002",
+            "Finding 2:",
+            "Proposition: Second finding",
+        ):
+            self.assertIn(expected, section)
+        self.assertLess(section.index("First finding"), section.index("Second finding"))
+        for internal_name in (
+            "sample_limitations",
+            "supporting_ids",
+            "adverse_ids",
+            "excluded_ids",
+            "prevalence_supporting_ids",
+            "scope_supporting_ids",
+        ):
+            self.assertNotIn(internal_name, section)
+
+    def test_key_uncertainties_use_fixed_labels_without_changing_structural_order(self):
+        complete = self.complete_result()
+        output = SimpleNamespace(
+            sample_limitations=("SMALL_SAMPLE",),
+            factors=("FACTOR_OUTPUT",),
+            diagnostics=("DIAGNOSTIC_OUTPUT",),
+            findings=(),
+        )
+        stage = complete.stage(self.workflow.WorkflowStage.MARKET_DEMAND)
+        stages = list(complete.stages)
+        stages[tuple(self.workflow.WorkflowStage).index(stage.stage)] = dataclasses.replace(
+            stage, output=output
+        )
+        research_stage = complete.stage(self.workflow.WorkflowStage.RESEARCH_EVIDENCE)
+        stages[tuple(self.workflow.WorkflowStage).index(research_stage.stage)] = dataclasses.replace(
+            research_stage,
+            status=self.workflow.WorkflowStageStatus.UNRESOLVED,
+            output=research_stage.output,
+        )
+        report = self.report.render_final_report(
+            dataclasses.replace(complete, stages=tuple(stages))
+        )
+        uncertainty = report.split("## 13. Red Team Findings", 1)[0].split(
+            "## 12. Key Uncertainties", 1
+        )[1]
+        self.assertLess(
+            uncertainty.index("RESEARCH_EVIDENCE"), uncertainty.index("Market Demand")
+        )
+        for expected in (
+            "Market Demand Sample Limitations: SMALL_SAMPLE",
+            "Market Demand Factors: FACTOR_OUTPUT",
+            "Market Demand Diagnostics: DIAGNOSTIC_OUTPUT",
+        ):
+            self.assertIn(expected, uncertainty)
+        for internal_name in ("sample_limitations", "factors", "diagnostics"):
+            self.assertNotIn(internal_name, uncertainty)
+
+    def test_red_team_revisions_render_authoritative_typed_transitions_only(self):
+        complete = self.complete_result()
+        initial_risk = complete.risk_result
+        revised_risk = dataclasses.replace(
+            initial_risk, risk_gate=self.risk_gate.RiskGateState("REVIEW_REQUIRED")
+        )
+        risk_proposal = self.red_team.RiskRevisionProposal(
+            initial_risk, revised_risk, "Risk challenge accepted.", (self.eid("E002"),)
+        )
+        inputs = self.economics.UnitEconomicsInputs(
+            *(
+                self.economics.EconomicInput(
+                    Decimal(amount),
+                    "USD",
+                    self.economics.Status("Observed"),
+                    self.economics.Confidence("High"),
+                    (self.eid("E002"),),
+                )
+                for amount in ("100", "40", "10", "10", "5", "5", "10", "5")
+            )
+        )
+        revised_economics = self.economics.evaluate_unit_economics(
+            inputs, self.economics.UnitEconomicsPolicy(Decimal("0.20"), Decimal("0.40"))
+        )
+        economics_proposal = self.red_team.EconomicsRevisionProposal(
+            complete.economics_result,
+            revised_economics,
+            "Economics challenge accepted.",
+            (self.eid("E002"),),
+        )
+        revision = self.red_team.evaluate_red_team_revision(
+            complete.initial_scores,
+            (self.eid("E001"),),
+            (self.eid("E002"),),
+            (),
+            (complete.red_team_inputs.score_proposals[0],),
+            risk_proposal=risk_proposal,
+            economics_proposal=economics_proposal,
+        )
+        revision_stage = complete.stage(self.workflow.WorkflowStage.RED_TEAM_REVISION)
+        result = dataclasses.replace(
+            complete,
+            stages=(
+                *complete.stages[:-2],
+                dataclasses.replace(revision_stage, output=revision),
+                complete.stages[-1],
+            ),
+        )
+        red_team = self.report.render_final_report(result).split(
+            "## 14. Final Analysis Label", 1
+        )[0].split("## 13. Red Team Findings", 1)[1]
+
+        for expected in (
+            "Dimension=Price & Profitability",
+            "Score: 80 -> 90",
+            "Confidence: High -> High",
+            "Reason=Accepted after adverse evidence.",
+            "Causal Evidence IDs=E002",
+            "Risk Gate: CLEAR -> REVIEW_REQUIRED",
+            "Outcome: MEETS_TARGET -> UNVIABLE",
+            "Minimum Viability Gate: PASS -> FAIL",
+            "Dynamic Target Gate: PASS -> FAIL",
+            "Reason=Risk challenge accepted.",
+            "Reason=Economics challenge accepted.",
+        ):
+            self.assertIn(expected, red_team)
+        self.assertNotIn("RiskComplianceResult(", red_team)
+        self.assertNotIn("UnitEconomicsResult(", red_team)
+
+    def test_reporting_does_not_couple_to_private_scoring_dimension_registry(self):
+        source = Path("product_research/final_report_generation.py").read_text()
+        self.assertNotIn("scoring_decision._FIELD_NAMES", source)
+        report = self.report.render_final_report(self.complete_result())
+        scorecard = report.split("## 11. Key Evidence", 1)[0].split(
+            "## 10. Scorecard", 1
+        )[1]
+        dimensions = [
+            line.split("|", 2)[1].strip()
+            for line in scorecard.splitlines()
+            if line.startswith("| ") and not line.startswith("|---") and "Dimension" not in line
+        ]
+        self.assertEqual(
+            dimensions,
+            [
+                "Market Demand",
+                "Competition",
+                "Price & Profitability",
+                "Pain Points & Differentiation",
+                "Supply Chain & Fulfillment",
+                "Brand Potential",
+                "Content Potential",
+                "Risk & Compliance",
+            ],
+        )
 
     def test_brand_and_content_sections_do_not_leak_findings_across_dimensions(self):
         complete = self.complete_result()

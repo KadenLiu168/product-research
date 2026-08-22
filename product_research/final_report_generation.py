@@ -47,51 +47,84 @@ _DIMENSIONS = (
 )
 
 _DOMAIN_FIELDS = (
-    "conclusion",
-    "temporal_state",
-    "sample_adequacy",
-    "confidence",
-    "supported_categories",
-    "unknown_categories",
-    "missing_categories",
-    "supported_dimensions",
-    "unknown_dimensions",
-    "missing_dimensions",
-    "supported_aspects",
-    "unknown_aspects",
-    "missing_aspects",
-    "required_areas",
-    "supported_required_areas",
-    "unresolved_required_areas",
-    "missing_required_areas",
-    "covered_strata",
-    "missing_strata",
-    "covered_price_bands",
-    "sample_limitations",
-    "factors",
-    "diagnostics",
-    "unresolved_inputs",
-    "outcome",
+    ("conclusion", "Conclusion"),
+    ("temporal_state", "Temporal State"),
+    ("sample_adequacy", "Sample Adequacy"),
+    ("confidence", "Confidence"),
+    ("supporting_ids", "Supporting Evidence"),
+    ("adverse_ids", "Adverse Evidence"),
+    ("excluded_ids", "Excluded Evidence"),
+    ("evidence_ids", "Evidence IDs"),
+    ("supported_categories", "Supported Categories"),
+    ("unknown_categories", "Unknown Categories"),
+    ("missing_categories", "Missing Categories"),
+    ("supported_dimensions", "Supported Dimensions"),
+    ("unknown_dimensions", "Unknown Dimensions"),
+    ("missing_dimensions", "Missing Dimensions"),
+    ("supported_aspects", "Supported Aspects"),
+    ("unknown_aspects", "Unknown Aspects"),
+    ("missing_aspects", "Missing Aspects"),
+    ("required_areas", "Required Areas"),
+    ("supported_required_areas", "Supported Required Areas"),
+    ("unresolved_required_areas", "Unresolved Required Areas"),
+    ("missing_required_areas", "Missing Required Areas"),
+    ("covered_strata", "Covered Strata"),
+    ("missing_strata", "Missing Strata"),
+    ("covered_price_bands", "Covered Price Bands"),
+    ("sample_limitations", "Sample Limitations"),
+    ("factors", "Factors"),
+    ("diagnostics", "Diagnostics"),
+    ("unresolved_inputs", "Unresolved Inputs"),
+    ("outcome", "Outcome"),
 )
 
 _FINDING_FIELDS = (
-    "dimension",
-    "aspect",
-    "category",
-    "area",
-    "proposition",
-    "outcome",
-    "supported_classification",
-    "confidence",
-    "supporting_ids",
-    "adverse_ids",
-    "excluded_ids",
-    "prevalence",
-    "prevalence_supporting_ids",
-    "scope",
-    "scope_supporting_ids",
-    "factors",
-    "diagnostics",
+    ("dimension", "Dimension"),
+    ("aspect", "Aspect"),
+    ("category", "Category"),
+    ("area", "Area"),
+    ("proposition", "Proposition"),
+    ("outcome", "Outcome"),
+    ("supported_classification", "Supported Classification"),
+    ("confidence", "Confidence"),
+    ("supporting_ids", "Supporting Evidence"),
+    ("adverse_ids", "Adverse Evidence"),
+    ("excluded_ids", "Excluded Evidence"),
+    ("prevalence", "Prevalence"),
+    ("prevalence_supporting_ids", "Prevalence Supporting Evidence"),
+    ("scope", "Scope"),
+    ("scope_supporting_ids", "Scope Supporting Evidence"),
+    ("factors", "Factors"),
+    ("diagnostics", "Diagnostics"),
+)
+
+_UNCERTAINTY_FIELDS = (
+    ("unknown_categories", "Unknown Categories"),
+    ("missing_categories", "Missing Categories"),
+    ("unknown_dimensions", "Unknown Dimensions"),
+    ("missing_dimensions", "Missing Dimensions"),
+    ("unknown_aspects", "Unknown Aspects"),
+    ("missing_aspects", "Missing Aspects"),
+    ("missing_strata", "Missing Strata"),
+    ("sample_limitations", "Sample Limitations"),
+    ("unresolved_required_areas", "Unresolved Required Areas"),
+    ("missing_required_areas", "Missing Required Areas"),
+    ("unresolved_inputs", "Unresolved Inputs"),
+    ("factors", "Factors"),
+    ("diagnostics", "Diagnostics"),
+    ("reasons", "Reasons"),
+)
+
+_RISK_FINDING_FIELDS = (
+    ("area", "Area"),
+    ("proposition", "Proposition"),
+    ("outcome", "Outcome"),
+    ("supported_classification", "Supported Classification"),
+    ("confidence", "Confidence"),
+    ("supporting_ids", "Supporting Evidence"),
+    ("adverse_ids", "Adverse Evidence"),
+    ("excluded_ids", "Excluded Evidence"),
+    ("diagnostics", "Diagnostics"),
 )
 
 
@@ -194,8 +227,10 @@ def _collect_domain_ids(collected, output, prefix):
 def _collect_selected_ids(result, state):
     collected = set()
     if state.scores is not None:
-        for name, score in zip(scoring_decision._FIELD_NAMES, scoring_decision.iter_dimension_scores(state.scores)):
-            _add_ids(collected, score.evidence_ids, f"scores.{name}.evidence_ids")
+        for (_, field_name, _), score in zip(
+            _DIMENSIONS, scoring_decision.iter_dimension_scores(state.scores)
+        ):
+            _add_ids(collected, score.evidence_ids, f"scores.{field_name}.evidence_ids")
     if state.decision is not None:
         _add_ids(collected, state.decision.evidence_ids, "decision.evidence_ids")
     _collect_domain_ids(collected, state.risk, "risk")
@@ -334,8 +369,16 @@ def _validate_aggregate(state, contributions):
 
 
 def _render_stage_status(lines, result):
-    lines.append("- Workflow Stage Status:")
-    for record in result.stage_trace:
+    incomplete = tuple(
+        record
+        for record in result.stage_trace
+        if record.status is not end_to_end_workflow.WorkflowStageStatus.COMPLETE
+    )
+    if not incomplete:
+        lines.append("- Workflow Status: COMPLETE")
+        return
+    lines.append("- Workflow Status: INCOMPLETE")
+    for record in incomplete:
         detail = record.status.value
         if record.failure_kind is not None:
             detail += f"; failure={record.failure_kind.value}"
@@ -356,10 +399,11 @@ def _render_domain(lines, result, title, stage, output_fields=(), finding_dimens
         lines.append(f"- Analysis: {UNAVAILABLE}")
         return
     fields = output_fields or _DOMAIN_FIELDS
-    for field_name in fields:
+    for field_name, label in fields:
         value = getattr(output, field_name, None)
         if value not in (None, (), ""):
-            lines.append(f"- {field_name}: {_value(value)}")
+            rendered = _ids_text(value) if field_name.endswith("ids") else _value(value)
+            lines.append(f"- {label}: {rendered}")
     findings = getattr(output, "findings", ())
     if finding_dimension is not None:
         findings = tuple(
@@ -372,11 +416,11 @@ def _render_domain(lines, result, title, stage, output_fields=(), finding_dimens
         lines.append("- Findings:")
         for index, finding in enumerate(findings, 1):
             lines.append(f"  - Finding {index}:")
-            for field_name in _FINDING_FIELDS:
+            for field_name, label in _FINDING_FIELDS:
                 value = getattr(finding, field_name, None)
                 if value not in (None, (), ""):
                     rendered = _ids_text(value) if field_name.endswith("ids") else _value(value)
-                    lines.append(f"    - {field_name}: {rendered}")
+                    lines.append(f"    - {label}: {rendered}")
 
 
 def _render_economics(lines, economics):
@@ -412,19 +456,24 @@ def _render_risk(lines, risk):
         lines.append(f"- Risk State: {UNAVAILABLE}")
         return
     lines.append(f"- Risk Gate: {_value(risk.risk_gate)}")
-    for field_name in ("required_areas", "supported_required_areas", "unresolved_required_areas", "missing_required_areas", "diagnostics"):
+    fields = (
+        ("required_areas", "Required Areas"),
+        ("supported_required_areas", "Supported Required Areas"),
+        ("unresolved_required_areas", "Unresolved Required Areas"),
+        ("missing_required_areas", "Missing Required Areas"),
+        ("diagnostics", "Diagnostics"),
+    )
+    for field_name, label in fields:
         value = getattr(risk, field_name, ())
         if value:
-            lines.append(f"- {field_name}: {_value(value)}")
+            lines.append(f"- {label}: {_value(value)}")
     for index, finding in enumerate(risk.findings, 1):
-        lines.append(
-            f"- Risk Finding {index}: area={_value(finding.area)}; "
-            f"proposition={_value(finding.proposition)}; outcome={_value(finding.outcome)}; "
-            f"classification={_value(finding.supported_classification)}; "
-            f"confidence={_value(finding.confidence)}; "
-            f"supporting={_ids_text(finding.supporting_ids)}; adverse={_ids_text(finding.adverse_ids)}; "
-            f"excluded={_ids_text(finding.excluded_ids)}; diagnostics={_value(finding.diagnostics)}"
-        )
+        lines.append(f"- Risk Finding {index}:")
+        for field_name, label in _RISK_FINDING_FIELDS:
+            value = getattr(finding, field_name, None)
+            if value not in (None, (), ""):
+                rendered = _ids_text(value) if field_name.endswith("ids") else _value(value)
+                lines.append(f"  - {label}: {rendered}")
 
 
 def _render_red_team(lines, revision):
@@ -441,16 +490,38 @@ def _render_red_team(lines, revision):
         lines.append("- Accepted Findings: NONE")
     for index, record in enumerate(revision.score_revisions, 1):
         lines.append(
-            f"- Accepted Score Revision {index}: dimension={_value(record.dimension)}; "
-            f"before={_format_score(record.initial_score.score)}; after={_format_score(record.revised_score.score)}; "
-            f"reason={_escape(record.reason)}; causal Evidence IDs={_ids_text(record.causal_evidence_ids)}"
+            f"- Accepted Score Revision {index}: Dimension={_value(record.dimension)}; "
+            f"Score: {_format_score(record.initial_score.score)} -> "
+            f"{_format_score(record.revised_score.score)}; "
+            f"Confidence: {_value(record.initial_score.confidence)} -> "
+            f"{_value(record.revised_score.confidence)}; "
+            f"Reason={_escape(record.reason)}; "
+            f"Causal Evidence IDs={_ids_text(record.causal_evidence_ids)}"
         )
-    for label, record in (("Risk", revision.risk_revision), ("Unit Economics", revision.economics_revision)):
-        if record is not None:
-            lines.append(
-                f"- Accepted {label} Revision: before={_value(record.before)}; after={_value(record.after)}; "
-                f"reason={_escape(record.reason)}; causal Evidence IDs={_ids_text(record.causal_evidence_ids)}"
-            )
+    if revision.risk_revision is not None:
+        record = revision.risk_revision
+        lines.append(
+            "- Accepted Risk Revision: "
+            f"Risk Gate: {_value(record.initial_result.risk_gate)} -> "
+            f"{_value(record.revised_result.risk_gate)}; "
+            f"Reason={_escape(record.reason)}; "
+            f"Causal Evidence IDs={_ids_text(record.causal_evidence_ids)}"
+        )
+    if revision.economics_revision is not None:
+        record = revision.economics_revision
+        lines.append(
+            "- Accepted Unit Economics Revision: "
+            f"Outcome: {_value(record.initial_result.outcome)} -> "
+            f"{_value(record.revised_result.outcome)}; "
+            f"Minimum Viability Gate: "
+            f"{_value(record.initial_result.minimum_viability_gate.outcome)} -> "
+            f"{_value(record.revised_result.minimum_viability_gate.outcome)}; "
+            f"Dynamic Target Gate: "
+            f"{_value(record.initial_result.dynamic_target_gate.outcome)} -> "
+            f"{_value(record.revised_result.dynamic_target_gate.outcome)}; "
+            f"Reason={_escape(record.reason)}; "
+            f"Causal Evidence IDs={_ids_text(record.causal_evidence_ids)}"
+        )
 
 
 def _render_scorecard(lines, state):
@@ -495,25 +566,10 @@ def _render_scorecard(lines, state):
 def _append_explicit_uncertainty(entries, prefix, output, finding_dimension=None):
     if output is None:
         return
-    for field_name in (
-        "unknown_categories",
-        "missing_categories",
-        "unknown_dimensions",
-        "missing_dimensions",
-        "unknown_aspects",
-        "missing_aspects",
-        "missing_strata",
-        "sample_limitations",
-        "unresolved_required_areas",
-        "missing_required_areas",
-        "unresolved_inputs",
-        "factors",
-        "diagnostics",
-        "reasons",
-    ):
+    for field_name, label in _UNCERTAINTY_FIELDS:
         value = getattr(output, field_name, ())
         if value:
-            entries.append(f"{prefix} {field_name}: {_value(value)}")
+            entries.append(f"{prefix} {label}: {_value(value)}")
     findings = getattr(output, "findings", ())
     if finding_dimension is not None:
         findings = tuple(
@@ -526,10 +582,13 @@ def _append_explicit_uncertainty(entries, prefix, output, finding_dimension=None
         outcome = getattr(finding, "outcome", None)
         if outcome is not None and getattr(outcome, "value", None) == "UNKNOWN":
             entries.append(f"{prefix} finding {index}: UNKNOWN")
-        for field_name in ("factors", "diagnostics"):
+        for field_name, label in (
+            ("factors", "Factors"),
+            ("diagnostics", "Diagnostics"),
+        ):
             value = getattr(finding, field_name, ())
             if value:
-                entries.append(f"{prefix} finding {index} {field_name}: {_value(value)}")
+                entries.append(f"{prefix} finding {index} {label}: {_value(value)}")
 
 
 def _render_key_uncertainties(lines, result, state):

@@ -41,3 +41,30 @@ class FinalReportDocumentationTests(unittest.TestCase):
             "no ECO-39 evaluation suite",
         ):
             self.assertIn(phrase, scenarios)
+
+    def test_reference_contract_and_living_spec_declare_refined_presentation(self):
+        contract = (self.root / "references" / "report-contract.md").read_text()
+        living = (
+            self.root
+            / "openspec"
+            / "specs"
+            / "final-report-generation"
+            / "spec.md"
+        ).read_text()
+        for content in (contract, living):
+            for phrase in (
+                "fixed reader-facing labels",
+                "compact",
+                "non-complete",
+                "Evidence IDs",
+                "Risk Gate",
+                "Minimum Viability Gate",
+                "Dynamic Target Gate",
+            ):
+                self.assertIn(phrase, content)
+            self.assertIn("overall-report", content)
+            self.assertIn("Confidence", content)
+        self.assertNotIn("ECO-39", contract)
+        self.assertIn("Workflow Status: COMPLETE", contract)
+        self.assertIn("complete Evidence Appendix", contract)
+        self.assertIn("not a rank", contract)
