@@ -142,7 +142,7 @@ def parse_live_response(response: DataForSEOHTTPResponse, expected_endpoint: str
     """Return ``("success", task-or-none)`` or ``("failed", None)``.
 
     This shared parser owns only the HTTP/envelope/task protocol. Operation
-    result validation remains in the SEARCH module.
+    result validation remains in each concrete provider module.
     """
 
     if type(response) is not DataForSEOHTTPResponse:

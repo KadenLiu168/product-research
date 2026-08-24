@@ -1,0 +1,142 @@
+{
+  "version": "0.1.test",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0010 sec.",
+  "cost": 0.01,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0005 sec.",
+      "cost": 0.01,
+      "result_count": 2,
+      "path": ["v3", "merchant", "amazon", "products", "live", "advanced"],
+      "data": {
+        "api": "merchant",
+        "function": "products",
+        "se": "amazon",
+        "se_type": "products",
+        "device": "desktop",
+        "os": "windows",
+        "keyword": "wireless headphones",
+        "location_code": 2840,
+        "language_code": "en",
+        "depth": 100,
+        "tag": "eco43"
+      },
+      "result": [
+        {
+          "keyword": "wireless headphones",
+          "type": "organic",
+          "datetime": "2026-08-24T10:20:30.987+02:00",
+          "check_url": "https://www.amazon.com/s?k=wireless+headphones",
+          "items_count": 5,
+          "items": [
+            {
+              "type": "amazon_serp",
+              "data_asin": "B000001",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "domain": "amazon.com",
+              "title": "Wireless Headphones",
+              "url": "https://www.amazon.com/dp/B000001",
+              "image_url": "https://images.example/B000001.jpg",
+              "bought_past_month": 1000,
+              "price_from": null,
+              "price_to": 99.99,
+              "currency": "USD",
+              "special_offers": ["Deal"],
+              "rating": {"value": 4.5, "votes_count": 120},
+              "is_amazon_choice": true,
+              "is_best_seller": false,
+              "delivery": {"tag": "FREE delivery", "date": "2026-08-26"},
+              "labels": ["choice"]
+            },
+            {
+              "type": "editorial_recommendations",
+              "products": [{"type": "amazon_serp", "data_asin": "NESTED"}]
+            },
+            {
+              "type": "amazon_paid",
+              "data_asin": "B000001",
+              "rank_group": 1,
+              "rank_absolute": 4,
+              "domain": "amazon.com",
+              "title": "Wireless Headphones Sponsored",
+              "url": "https://www.amazon.com/dp/B000001",
+              "image_url": null,
+              "bought_past_month": null,
+              "price_from": 89.0,
+              "price_to": 109.0,
+              "currency": "USD",
+              "special_offers": [],
+              "rating": null,
+              "is_amazon_choice": false,
+              "is_best_seller": null,
+              "delivery": null,
+              "labels": []
+            },
+            {
+              "type": "top_rated_from_our_brands",
+              "products": [{"type": "amazon_paid", "data_asin": "NESTED2"}]
+            },
+            {
+              "type": "amazon_serp",
+              "data_asin": "B000002",
+              "rank_group": 2,
+              "rank_absolute": 5,
+              "domain": "amazon.com",
+              "title": "Another Headphone",
+              "url": "https://www.amazon.com/dp/B000002",
+              "image_url": "https://images.example/B000002.jpg",
+              "bought_past_month": null,
+              "price_to": null,
+              "currency": "USD",
+              "special_offers": null,
+              "is_amazon_choice": null,
+              "is_best_seller": false,
+              "delivery": {"tag": null},
+              "labels": ["new"]
+            }
+          ]
+        },
+        {
+          "keyword": "wireless headphones",
+          "type": "organic",
+          "datetime": "2026-08-24T10:20:31Z",
+          "items_count": 2,
+          "items": [
+            {
+              "type": "amazon_paid",
+              "data_asin": "B000003",
+              "rank_group": 1,
+              "rank_absolute": 1,
+              "domain": "amazon.com",
+              "title": "Third Headphone",
+              "url": "https://www.amazon.com/dp/B000003",
+              "image_url": "https://images.example/B000003.jpg",
+              "bought_past_month": 20,
+              "price_from": 20.0,
+              "price_to": 25.0,
+              "currency": "USD",
+              "special_offers": [],
+              "rating": {"value": 3.0, "votes_count": 2},
+              "is_amazon_choice": false,
+              "is_best_seller": false,
+              "delivery": {"tag": "Delivery"},
+              "labels": []
+            },
+            {
+              "type": "related_searches",
+              "products": [{"type": "amazon_serp", "data_asin": "NESTED3"}]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

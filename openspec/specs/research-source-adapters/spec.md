@@ -79,9 +79,9 @@ The family-level adapter capability SHALL remain standard-library-only and SHALL
 - **THEN** it exposes only family routing and acquisition-boundary composition and performs no external research by itself
 
 #### Scenario: Provider-free composition accepts an external provider
-- **WHEN** the adapter module and capability documentation are inspected after a conforming external SEARCH provider is configured
-- **THEN** the module still exposes only family routing and acquisition-boundary composition while its existing `search` slot can invoke that external provider callable
+- **WHEN** the adapter module and capability documentation are inspected after conforming external SEARCH and MARKETPLACE providers are configured
+- **THEN** the module still exposes only family routing and acquisition-boundary composition while its existing `search` and `marketplace` slots can invoke their matching external provider callables
 
 #### Scenario: Capability status remains family-specific
-- **WHEN** configured DataForSEO SEARCH acquisition exists but other provider or source-family implementations do not
-- **THEN** capability documentation states SEARCH availability narrowly and continues to identify unsupported provider/source-family acquisition as unavailable
+- **WHEN** configured DataForSEO SEARCH and Amazon Products MARKETPLACE acquisition exist but other provider or source-family implementations do not
+- **THEN** capability documentation states SEARCH and MARKETPLACE availability narrowly and continues to identify unsupported provider/source-family acquisition as unavailable
