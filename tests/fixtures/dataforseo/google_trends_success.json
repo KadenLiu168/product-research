@@ -1,0 +1,53 @@
+{
+  "version": "0.1.test",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0010 sec.",
+  "cost": 0.01,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0005 sec.",
+      "cost": 0.01,
+      "result_count": 1,
+      "path": ["v3", "keywords_data", "google_trends", "explore", "live"],
+      "data": {"location_name": "United States", "language_code": "en", "keywords": ["blue shoes", "running shoes"]},
+      "result": [
+        {
+          "keywords": ["blue shoes", "running shoes"],
+          "type": "trends",
+          "location_code": 2840,
+          "language_code": "en",
+          "check_url": "https://trends.google.com/trends/explore?geo=US&q=blue%20shoes",
+          "datetime": "2026-08-20 18:40:17 +00:00",
+          "items_count": 2,
+          "items": [
+            {
+              "position": 1,
+              "type": "google_trends_graph",
+              "title": "Interest over time",
+              "keywords": ["blue shoes", "running shoes"],
+              "data": [
+                {"date_from": "2026-01-01", "date_to": "2026-01-07", "timestamp": 1767225600, "missing_data": false, "values": [54, 38]},
+                {"date_from": "2026-01-08", "date_to": "2026-01-14", "timestamp": 1767830400, "missing_data": true, "values": [null, 22]}
+              ]
+            },
+            {
+              "position": 2,
+              "type": "google_trends_map",
+              "title": "Interest by subregion",
+              "keywords": ["blue shoes", "running shoes"],
+              "data": [
+                {"geo_id": "US-CA", "geo_name": "California", "values": [12, 8], "max_value_index": 0}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

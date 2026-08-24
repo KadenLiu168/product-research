@@ -1,0 +1,34 @@
+{
+  "version": "0.1.test",
+  "status_code": 20000,
+  "status_message": "Ok.",
+  "time": "0.0010 sec.",
+  "cost": 0.01,
+  "tasks_count": 1,
+  "tasks_error": 0,
+  "tasks": [
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "status_code": 20000,
+      "status_message": "Ok.",
+      "time": "0.0005 sec.",
+      "cost": 0.01,
+      "result_count": 1,
+      "path": ["v3", "dataforseo_labs", "amazon", "bulk_search_volume", "live"],
+      "data": {"location_code": 2840, "language_code": "en", "keywords": ["blue shoes", "unknown shoes"]},
+      "result": [
+        {
+          "se_type": "amazon",
+          "location_code": 2840,
+          "language_code": "en",
+          "total_count": 2,
+          "items_count": 2,
+          "items": [
+            {"se_type": "amazon", "keyword": "blue shoes", "search_volume": 870},
+            {"se_type": "amazon", "keyword": "unknown shoes"}
+          ]
+        }
+      ]
+    }
+  ]
+}
