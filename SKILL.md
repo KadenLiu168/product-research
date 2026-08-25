@@ -71,6 +71,33 @@ supported operations. Policy, Assessment, structured analysis, scoring, gates,
 reporting, and the complete provider-backed 16-stage workflow remain
 caller-controlled; the runtime does not perform live research by itself.
 
+### User-owned DataForSEO file configuration
+
+The optional external `dataforseo_configuration.py` boundary resolves the
+canonical user file at `~/.config/product-research/config.toml`, or at
+`$XDG_CONFIG_HOME/product-research/config.toml` when `XDG_CONFIG_HOME` is a
+non-empty absolute path. It never searches the repository or current working
+directory. Source precedence is fixed and whole-source: explicit
+`DataForSEOConfiguration`, explicit `config_path`, existing canonical file,
+then the existing `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD` environment
+fallback. Sources are not merged; an invalid selected source fails closed.
+
+Repository-local `config.toml` and `config.local.toml` files are ignored only
+as defense in depth and are never discovered automatically. A caller may use
+one only by passing its path explicitly. The `.gitignore` rules do not secure
+credentials; keep the canonical file outside the repository. Recommended
+setup is:
+
+```bash
+mkdir -p ~/.config/product-research
+chmod 700 ~/.config/product-research
+chmod 600 ~/.config/product-research/config.toml
+```
+
+The file loader does not enforce permissions or merge defaults into provider
+requests. Defaults remain passive until a caller supplies explicit planning
+input to the existing typed request/runtime boundaries.
+
 ## Workflow
 
 Follow this order:

@@ -1,0 +1,12 @@
+# Copy this template to the user-owned canonical path before editing.
+# Do not commit real credentials to this repository.
+
+[dataforseo]
+enabled = true
+login = "YOUR_DATAFORSEO_LOGIN"
+password = "YOUR_DATAFORSEO_PASSWORD"
+
+[dataforseo.defaults]
+location_code = 2840
+language_code = "en"
+amazon_products_depth = 10
