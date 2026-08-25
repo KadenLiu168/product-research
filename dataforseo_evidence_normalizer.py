@@ -169,7 +169,9 @@ def _validate_marketplace_provenance(task_id, finding, metadata):
     )
     if finding.finding_id != expected_finding_id:
         raise ValueError("finding identity does not match operation and ordinals")
-    if type(metadata.get("provider_rank")) is not int:
+    if "provider_rank" not in metadata:
+        raise ValueError("provider rank provenance is malformed")
+    if "rank_absolute" not in observation:
         raise ValueError("provider rank provenance is malformed")
     _require_non_empty_text(metadata.get("amazon_domain"), "Amazon domain")
     _require_non_empty_text(metadata.get("result_reference"), "result reference")
@@ -179,7 +181,10 @@ def _validate_marketplace_provenance(task_id, finding, metadata):
     _require_non_empty_text(observation.get("type"), "listing type")
     _require_non_empty_text(observation.get("data_asin"), "listing ASIN")
     _require_non_empty_text(observation.get("title"), "listing title")
-    if metadata["provider_rank"] != observation.get("rank_absolute"):
+    if (
+        type(metadata["provider_rank"]) is not type(observation["rank_absolute"])
+        or metadata["provider_rank"] != observation["rank_absolute"]
+    ):
         raise ValueError("provider rank provenance does not match observation")
 
 

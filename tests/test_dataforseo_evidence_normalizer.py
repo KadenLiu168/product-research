@@ -31,6 +31,7 @@ from unittest.mock import patch
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures" / "dataforseo"
 FIXED_TIME = "2026-08-24T00:00:00Z"
+_UNSET = object()
 OPERATIONS = (
     "google_ads_search_volume_live",
     "google_trends_explore_live",
@@ -158,7 +159,7 @@ class NormalizerTestBase(unittest.TestCase):
         result = acquisition(task)
         return task, result.findings[0]
 
-    def marketplace_finding(self, task_id=None):
+    def marketplace_finding(self, task_id=None, *, rank_absolute=_UNSET):
         task = self.task("amazon_products_live", task_id=task_id)
         request = self.marketplace.AmazonProductsRequest(
             keyword="wireless headphones",
@@ -169,6 +170,8 @@ class NormalizerTestBase(unittest.TestCase):
             request_context="candidate-42",
         )
         payload = self.fixture("amazon_products_success.json")
+        if rank_absolute is not _UNSET:
+            payload["tasks"][0]["result"][0]["items"][0]["rank_absolute"] = rank_absolute
         task_data = payload["tasks"][0]["data"]
         task_data.update({
             "keyword": request.keyword,
@@ -335,6 +338,101 @@ class ClaimAndProvenanceTests(NormalizerTestBase):
         self.assertEqual(record.status, self.evidence.Status("Observed"))
         self.assertNotIn("Unknown", record.claim)
         self.assertNotIn("zero", record.claim.lower())
+
+    def test_provider_nullable_amazon_rank_round_trips_through_normalizer(self):
+        task, finding = self.marketplace_finding(rank_absolute=None)
+        self.assertIsNone(finding.metadata["provider_rank"])
+        self.assertIsNone(finding.metadata["observation"]["rank_absolute"])
+
+        record = self.normalizer()(task, finding, self.evidence.EvidenceId("E001"))
+
+        self.assertEqual(record.evidence, finding.content)
+        self.assertIsNone(json.loads(record.evidence)["observation"]["rank_absolute"])
+        self.assertIsNone(record.metadata["acquisition"]["provider_rank"])
+        self.assertIsNone(record.metadata["acquisition"]["observation"]["rank_absolute"])
+        self.assertEqual(record.status, self.evidence.Status("Observed"))
+
+    def test_provider_integer_amazon_rank_normalizes_unchanged(self):
+        for rank_absolute in (0, 1):
+            with self.subTest(rank_absolute=rank_absolute):
+                task, finding = self.marketplace_finding(rank_absolute=rank_absolute)
+                record = self.normalizer()(task, finding, self.evidence.EvidenceId("E001"))
+
+                self.assertEqual(record.metadata["acquisition"]["provider_rank"], rank_absolute)
+                self.assertEqual(
+                    record.metadata["acquisition"]["observation"]["rank_absolute"],
+                    rank_absolute,
+                )
+
+    def test_marketplace_rank_provenance_requires_both_equal_keys(self):
+        task, finding = self.marketplace_finding(rank_absolute=1)
+        cases = {}
+
+        contradictory = self.thaw(finding.metadata)
+        contradictory["provider_rank"] = 2
+        cases["contradictory"] = self.raw_with(finding, metadata=contradictory)
+
+        missing_provider = self.thaw(finding.metadata)
+        missing_provider.pop("provider_rank")
+        cases["missing provider_rank"] = self.raw_with(finding, metadata=missing_provider)
+
+        observation = self.thaw(finding.metadata["observation"])
+        observation.pop("rank_absolute")
+        content, missing_observation = self.content_and_metadata_with_observation(finding, observation)
+        cases["missing observation.rank_absolute"] = self.raw_with(
+            finding,
+            content=content,
+            metadata=missing_observation,
+        )
+
+        for label, bad_finding in cases.items():
+            with self.subTest(label=label), self.assertRaises((TypeError, ValueError)):
+                self.normalizer()(task, bad_finding, self.evidence.EvidenceId("E001"))
+
+    def test_marketplace_rank_provenance_rejects_cross_type_numeric_equality(self):
+        task, finding = self.marketplace_finding(rank_absolute=1)
+        for provider_rank, observation_rank in ((1, 1.0), (1, True), (0, False)):
+            with self.subTest(provider_rank=provider_rank, observation_rank=observation_rank):
+                observation = self.thaw(finding.metadata["observation"])
+                observation["rank_absolute"] = observation_rank
+                content, metadata = self.content_and_metadata_with_observation(finding, observation)
+                metadata["provider_rank"] = provider_rank
+
+                with self.assertRaises((TypeError, ValueError)):
+                    self.normalizer()(
+                        task,
+                        self.raw_with(finding, content=content, metadata=metadata),
+                        self.evidence.EvidenceId("E001"),
+                    )
+
+    def test_marketplace_normalizer_does_not_revalidate_provider_rank_type(self):
+        task, finding = self.marketplace_finding(rank_absolute=1)
+        for opaque_rank in (1.5, "provider-owned-opaque-rank", True, [1], {"rank": 1}):
+            with self.subTest(opaque_rank=opaque_rank):
+                observation = self.thaw(finding.metadata["observation"])
+                observation["rank_absolute"] = opaque_rank
+                content, metadata = self.content_and_metadata_with_observation(finding, observation)
+                metadata["provider_rank"] = opaque_rank
+
+                record = self.normalizer()(
+                    task,
+                    self.raw_with(finding, content=content, metadata=metadata),
+                    self.evidence.EvidenceId("E001"),
+                )
+
+                self.assertEqual(record.evidence, content)
+                self.assertEqual(record.metadata["acquisition"]["provider_rank"], opaque_rank)
+                self.assertEqual(
+                    record.metadata["acquisition"]["observation"]["rank_absolute"],
+                    opaque_rank,
+                )
+
+    def test_provider_rejects_invalid_rank_type_before_normalizer_boundary(self):
+        for invalid_rank in (1.5, "not-an-integer", True, [1], {"rank": 1}):
+            with self.subTest(invalid_rank=invalid_rank), self.assertRaises(
+                self.marketplace.DataForSEOProtocolError
+            ):
+                self.marketplace_finding(rank_absolute=invalid_rank)
 
     def test_frozen_metadata_is_thawed_mechanically_without_mutable_alias(self):
         task, finding = self.marketplace_finding()
