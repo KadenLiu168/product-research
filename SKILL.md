@@ -50,6 +50,22 @@ Read each reference before performing its stage:
 
 For a full evaluation, read all five references and the shared Evidence representation when creating or exchanging Evidence records, and the Evidence assessment boundary before combining multiple sources into a claim-level Confidence. For a narrower follow-up, read every reference governing the requested stage and any upstream evidence or gate rules it depends on.
 
+## Configured DataForSEO Acquisition Runtime
+
+The external `dataforseo_acquisition_runtime.py` module composes the existing
+DataForSEO providers into the existing `ResearchSourceAdapters` value. Callers
+supply explicit existing `ProviderBinding` values and one validated shared
+`DataForSEOConfiguration`; the runtime resolves bindings by exact `task_id`
+and does not infer operations from `research_question` or `query_intent`.
+
+The configured runtime can install the existing SEARCH family (Google Ads
+Search Volume, Google Trends Explore, and Amazon Bulk Search Volume) and the
+existing MARKETPLACE family (Amazon Products) together or independently.
+Intentionally absent or unsupported families remain unavailable. The runtime
+stops at existing `AcquisitionResult` and ordered `RawFinding` values; it does
+not normalize findings into Evidence, which remains the ECO-45 boundary, and
+it does not execute the complete workflow or perform live research by itself.
+
 ## Workflow
 
 Follow this order:
