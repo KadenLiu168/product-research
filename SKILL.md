@@ -63,8 +63,13 @@ Search Volume, Google Trends Explore, and Amazon Bulk Search Volume) and the
 existing MARKETPLACE family (Amazon Products) together or independently.
 Intentionally absent or unsupported families remain unavailable. The runtime
 stops at existing `AcquisitionResult` and ordered `RawFinding` values; it does
-not normalize findings into Evidence, which remains the ECO-45 boundary, and
-it does not execute the complete workflow or perform live research by itself.
+not normalize findings into Evidence. A caller may separately construct the
+external `dataforseo_evidence_normalizer.create_dataforseo_evidence_normalizer`
+with explicit per-operation Tier/base-Confidence assignments and inject its
+three-argument callable into the existing `run_research` seam for the four
+supported operations. Policy, Assessment, structured analysis, scoring, gates,
+reporting, and the complete provider-backed 16-stage workflow remain
+caller-controlled; the runtime does not perform live research by itself.
 
 ## Workflow
 
