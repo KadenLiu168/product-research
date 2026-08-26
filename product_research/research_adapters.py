@@ -10,6 +10,15 @@ from .research_orchestration import (
 )
 
 
+_ADAPTER_FIELDS = {
+    "SEARCH": "search",
+    "MARKETPLACE": "marketplace",
+    "CONSUMER_SOCIAL": "consumer_social",
+    "SUPPLIER": "supplier",
+    "REGULATORY_IP": "regulatory_ip",
+}
+
+
 @dataclass(frozen=True)
 class ResearchSourceAdapters:
     search: Optional[Callable] = None
@@ -36,18 +45,10 @@ class ResearchSourceAdapters:
         if type(task.source_family) is not SourceFamily:
             raise TypeError("source_family must be a SourceFamily")
 
-        if task.source_family.value == "SEARCH":
-            adapter = self.search
-        elif task.source_family.value == "MARKETPLACE":
-            adapter = self.marketplace
-        elif task.source_family.value == "CONSUMER_SOCIAL":
-            adapter = self.consumer_social
-        elif task.source_family.value == "SUPPLIER":
-            adapter = self.supplier
-        elif task.source_family.value == "REGULATORY_IP":
-            adapter = self.regulatory_ip
-        else:
+        field_name = _ADAPTER_FIELDS.get(task.source_family.value)
+        if field_name is None:
             raise ValueError("unsupported source family")
+        adapter = getattr(self, field_name)
 
         if adapter is None:
             return AcquisitionResult(

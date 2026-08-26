@@ -184,6 +184,28 @@ class SourceAdapterRoutingTests(ResearchAdapterTestBase):
             composition(self.corrupt_task("NOT_SUPPORTED"))
         self.assertEqual(calls, [])
 
+    def test_task_validation_precedes_family_dispatch_rejection(self):
+        calls = []
+        original_validate_task = self.adapters._validate_task
+
+        def validate_task(task):
+            calls.append(task)
+
+        self.adapters._validate_task = validate_task
+        try:
+            composition = self.adapters.ResearchSourceAdapters()
+            with self.assertRaisesRegex(TypeError, "task must be a ResearchTask"):
+                composition(object())
+            self.assertEqual(calls, [])
+
+            task = self.corrupt_task("NOT_SUPPORTED")
+            with self.assertRaisesRegex(TypeError, "source_family must be a SourceFamily"):
+                composition(task)
+        finally:
+            self.adapters._validate_task = original_validate_task
+
+        self.assertEqual(calls, [task])
+
     def test_configured_output_is_returned_by_identity_without_validation_or_repair(self):
         task = self.task("SEARCH")
         malformed = object()
