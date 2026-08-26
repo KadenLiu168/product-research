@@ -70,6 +70,8 @@ Active change 表示相对 living spec 的预期变化；代码和测试表示�
 
 ## 测试
 
+项目运行与测试要求 Python 3.11+。
+
 运行全部自动化测试：
 
 ```bash

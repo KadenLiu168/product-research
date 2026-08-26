@@ -91,7 +91,19 @@ setup is:
 ```bash
 mkdir -p ~/.config/product-research
 chmod 700 ~/.config/product-research
+
+cp config.toml.example ~/.config/product-research/config.toml
 chmod 600 ~/.config/product-research/config.toml
+```
+
+Then edit `~/.config/product-research/config.toml` and replace the placeholders
+with the real credentials:
+
+```toml
+[dataforseo]
+enabled = true
+login = "..."
+password = "..."
 ```
 
 The file loader does not enforce permissions or merge defaults into provider
