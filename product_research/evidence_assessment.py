@@ -26,6 +26,7 @@ with ``INSUFFICIENT``, ``Low``, and ``ASSESSMENT_INPUT_ERROR``.
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
+from ._deterministic_primitives import _confidence_maximum, _confidence_minimum
 from .evidence import Confidence, Evidence, EvidenceId, Tier, _ConstrainedValue
 from .evidence_policy import (
     EvidencePolicy,
@@ -84,10 +85,6 @@ _FACTOR_CAP = {
     "UNKNOWN_RELATIONSHIP": "Medium",
     "MEDIUM_BASE_CONFIDENCE": "Medium",
 }
-
-# Fixed ordinal mapping that selects among the existing Confidence
-# vocabulary only; it is not a numeric score, weight, or business metric.
-_CONFIDENCE_RANK = {"High": 3, "Medium": 2, "Low": 1}
 
 _SUPPORT_STANCE = "SUPPORTS"
 _CONTRADICT_STANCE = "CONTRADICTS"
@@ -467,7 +464,9 @@ def _determine_factors(state, outcome, known_groups):
     usable_confidences = [state.index[evidence_id].confidence for evidence_id in state.usable_ids]
     strongest = None
     if usable_confidences:
-        strongest = max(usable_confidences, key=lambda confidence: _CONFIDENCE_RANK[confidence.value])
+        strongest = usable_confidences[0]
+        for confidence in usable_confidences[1:]:
+            strongest = _confidence_maximum(strongest, confidence)
     if strongest is not None and strongest.value == "Low":
         add("LOW_BASE_CONFIDENCE")
 
@@ -490,12 +489,11 @@ def _determine_factors(state, outcome, known_groups):
 
 
 def _confidence_from(factors):
-    cap = "High"
+    cap = Confidence("High")
     for factor in factors:
-        candidate = _FACTOR_CAP[factor.value]
-        if _CONFIDENCE_RANK[candidate] < _CONFIDENCE_RANK[cap]:
-            cap = candidate
-    return Confidence(cap)
+        candidate = Confidence(_FACTOR_CAP[factor.value])
+        cap = _confidence_minimum(cap, candidate)
+    return cap
 
 
 def _fail_closed_result(state):

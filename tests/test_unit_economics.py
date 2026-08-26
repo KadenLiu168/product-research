@@ -1755,7 +1755,7 @@ class UnitEconomicsPurityAndOwnershipTests(unittest.TestCase):
         tree = ast.parse(source)
 
         evidence_names = set()
-        allowed_stdlib = {"decimal", "dataclasses", "re", "typing"}
+        allowed_stdlib = {"decimal", "dataclasses", "re", "typing", "_deterministic_primitives"}
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom):
                 module_name = node.module or ""

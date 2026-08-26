@@ -103,7 +103,7 @@ def _dimension_is_valid(value):
     return True
 
 
-def _score_is_valid(value, *, canonical_unresolved=True):
+def _score_is_valid(value):
     if type(value) is not DimensionScore:
         return False
     try:
@@ -113,9 +113,7 @@ def _score_is_valid(value, *, canonical_unresolved=True):
         if not _canonical_ids_are_valid(value.evidence_ids, "evidence_ids"):
             return False
         if value.score is None:
-            return not canonical_unresolved or (
-                value.confidence.value == "Low" and value.evidence_ids == ()
-            )
+            return value.confidence.value == "Low" and value.evidence_ids == ()
         if type(value.score) is not Decimal or not value.score.is_finite():
             return False
         return Decimal("0") <= value.score <= Decimal("100") and bool(value.evidence_ids)

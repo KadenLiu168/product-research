@@ -12,6 +12,7 @@ from decimal import (
 )
 from typing import Dict, Iterable, Optional, Set, Tuple
 
+from ._deterministic_primitives import _confidence_maximum, _confidence_minimum
 from .brand_content import BrandContentFinding, BrandContentResult
 from .competition import CompetitionFinding, CompetitionResult
 from .evidence import Confidence, EvidenceId
@@ -42,7 +43,6 @@ _QUALITATIVE_FIELDS = (
     "content_potential",
     "risk_compliance",
 )
-_CONFIDENCE_RANK = {"Low": 1, "Medium": 2, "High": 3}
 _MATERIAL_FACTORS = frozenset(
     {"MATERIAL_INFORMATION_MISSING", "CRITICAL_INFORMATION_MISSING"}
 )
@@ -123,7 +123,7 @@ def _unresolved():
 
 
 def _valid_confidence(value):
-    return type(value) is Confidence and value.value in _CONFIDENCE_RANK
+    return type(value) is Confidence and value.value in Confidence._allowed
 
 
 def _safe_confidence(value):
@@ -411,8 +411,10 @@ def _qualitative_score(judgment, supports):
     confidences = tuple(support.confidence for support in relevant)
     if not all(_valid_confidence(confidence) for confidence in confidences):
         return _unresolved()
-    ceiling = min(confidences, key=lambda confidence: _CONFIDENCE_RANK[confidence.value])
-    if _CONFIDENCE_RANK[judgment.confidence.value] > _CONFIDENCE_RANK[ceiling.value]:
+    ceiling = confidences[0]
+    for confidence in confidences[1:]:
+        ceiling = _confidence_minimum(ceiling, confidence)
+    if _confidence_maximum(judgment.confidence, ceiling) != ceiling:
         return _unresolved()
     return DimensionScore(judgment.score, judgment.confidence, judgment.evidence_ids)
 

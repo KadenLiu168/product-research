@@ -30,48 +30,10 @@ from decimal import (
     Overflow,
     localcontext,
 )
-from typing import ClassVar, Optional, Tuple
+from typing import Optional, Tuple
 
+from ._deterministic_primitives import _ClosedValue, _confidence_minimum
 from .evidence import Confidence, EvidenceId, Status
-
-
-class _ClosedValue:
-    """Immutable closed vocabulary value matching the shared Evidence style."""
-
-    _allowed: ClassVar[Tuple[str, ...]] = ()
-
-    def __setattr__(self, name, value):
-        if hasattr(self, "_value"):
-            raise AttributeError(f"{type(self).__name__} is immutable")
-        if name != "_value":
-            raise AttributeError(f"{type(self).__name__} is immutable")
-        object.__setattr__(self, name, value)
-
-    def __delattr__(self, name):
-        raise AttributeError(f"{type(self).__name__} is immutable")
-
-    def __init__(self, value: str):
-        if not isinstance(value, str):
-            raise TypeError("value must be a string")
-        if value not in self._allowed:
-            raise ValueError("unsupported value")
-        self._value = value
-
-    @property
-    def value(self):
-        return self._value
-
-    def __eq__(self, other):
-        return type(other) is type(self) and other.value == self.value
-
-    def __hash__(self):
-        return hash((type(self), self.value))
-
-    def __repr__(self):
-        return f"{type(self).__name__}({self.value!r})"
-
-    def __str__(self):
-        return self.value
 
 
 class GateOutcome(_ClosedValue):
@@ -111,8 +73,6 @@ _FIELD_NAMES = (
 _CURRENCY_PATTERN = re.compile(r"[A-Z]{3}")
 
 _REASON_PRIORITY = {value: index for index, value in enumerate(ReasonCode._allowed)}
-
-_CONFIDENCE_RANK = {"Low": 0, "Medium": 1, "High": 2}
 
 # Fixed private arithmetic configuration: 34 significant digits,
 # round-half-even, explicit exponent bounds, and traps only for invalid
@@ -402,8 +362,7 @@ def _union_ids(fields):
 def _weakest_confidence(fields):
     weakest = Confidence("High")
     for field in fields:
-        if _CONFIDENCE_RANK[field.confidence.value] < _CONFIDENCE_RANK[weakest.value]:
-            weakest = field.confidence
+        weakest = _confidence_minimum(weakest, field.confidence)
     return weakest
 
 

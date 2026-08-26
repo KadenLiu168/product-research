@@ -686,7 +686,7 @@ class BrandContentFailureAndScopeTests(BrandContentTestBase):
             for alias in node.names
         }
         self.assertTrue(
-            imported.issubset({"dataclasses", "typing", "evidence", "evidence_assessment", "evidence_policy"})
+            imported.issubset({"dataclasses", "typing", "_analysis_support", "evidence", "evidence_assessment", "evidence_policy"})
         )
         forbidden = (
             "requests", "urllib", "httpx", "playwright", "scraper", "network", "browser",
