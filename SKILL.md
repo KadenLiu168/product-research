@@ -53,17 +53,37 @@ For a full evaluation, read all five references and the shared Evidence represen
 ## Configured DataForSEO Acquisition Runtime
 
 The external `dataforseo_acquisition_runtime.py` module composes the existing
-DataForSEO providers into the existing `ResearchSourceAdapters` value. Callers
-supply explicit existing `ProviderBinding` values and one validated shared
-`DataForSEOConfiguration`; the runtime resolves bindings by exact `task_id`
-and does not infer operations from `research_question` or `query_intent`.
+DataForSEO providers into the existing `ResearchSourceAdapters` value. For the
+normal supported path, create or reuse existing `ResearchTask` values, choose
+one supported operation explicitly, construct typed
+`DataForSEOAcquisitionEntry` values in a `DataForSEOAcquisitionPlan`, and call
+`compile_dataforseo_acquisition_plan` with `settings.defaults` plus optional
+`DataForSEORunOverrides`. Pass the returned bindings directly to the existing
+ECO-44 runtime; normal callers do not construct provider-native request objects or
+`ProviderBinding` values, and the compiler never infers operations from
+`research_question` or `query_intent`.
+
+The closed operation choices and semantic inputs are:
+
+- `google_ads_search_volume_live` with ordered keywords;
+- `google_trends_explore_live` with ordered keywords, search type, category,
+  temporal scope, and requested result item types;
+- `amazon_bulk_search_volume_live` with ordered keywords; and
+- `amazon_products_live` with one product/search keyword.
+
+`DataForSEORunOverrides` contains only location name/code, language name/code,
+and Amazon Products depth. Each dimension resolves as current-run override >
+ECO-46 `DataForSEOProviderDefaults` > unspecified. A run-level name or code
+replaces the whole corresponding default dimension, so name and code are never
+combined. Provider request classes remain the final detailed request validators.
 
 The configured runtime can install the existing SEARCH family (Google Ads
 Search Volume, Google Trends Explore, and Amazon Bulk Search Volume) and the
 existing MARKETPLACE family (Amazon Products) together or independently.
 Intentionally absent or unsupported families remain unavailable. The runtime
 stops at existing `AcquisitionResult` and ordered `RawFinding` values; it does
-not normalize findings into Evidence. A caller may separately construct the
+not normalize findings into Evidence. ECO-45 normalization remains a separate
+caller-owned seam. A caller may separately construct the
 external `dataforseo_evidence_normalizer.create_dataforseo_evidence_normalizer`
 with explicit per-operation Tier/base-Confidence assignments and inject its
 three-argument callable into the existing `run_research` seam for the four
@@ -107,8 +127,8 @@ password = "..."
 ```
 
 The file loader does not enforce permissions or merge defaults into provider
-requests. Defaults remain passive until a caller supplies explicit planning
-input to the existing typed request/runtime boundaries.
+requests. Defaults remain passive until a caller supplies explicit structured
+planning input to the compiler and existing runtime boundaries.
 
 ## Workflow
 
