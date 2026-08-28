@@ -32,8 +32,11 @@ neutral, complete, or positive.
 ## Authoritative State
 
 When Stage 16 contains `WorkflowFinalState`, the report uses its scores, Risk,
-Unit Economics, final weights, aggregate, core-threshold results, and
-`DecisionResult` label and reasons exactly. Stage 13's initial decision never
+Unit Economics, final weights, aggregate, core-threshold results, normalized
+required-research readiness, and `DecisionResult` label and reasons exactly.
+The retained Stage 3 research-run status and missing required task IDs remain
+owned by `ResearchRunResult`; reporting joins those values without deriving
+readiness or rerunning decision policy. Stage 13's initial decision never
 substitutes for the final decision.
 
 When Stage 16 is unavailable, accepted Stage 15 revisions are rendered as
@@ -45,11 +48,14 @@ weights, aggregate, core results, and Final Analysis Label remain
 ## Executive Summary and Presentation Labels
 
 The Executive Summary retains the candidate, target market, state source,
-final label, aggregate, Risk, Unit Economics, core state, accepted Red Team
-state, and Key Decision `Evidence IDs` when authoritative. When every stage is
-complete it emits one `Workflow Status: COMPLETE` line. Otherwise it emits
-only the non-complete `UNRESOLVED`, `BLOCKED`, and `FAILED` stage records in canonical order,
-including retained failure kinds and `blocked_by` dependencies.
+final label, aggregate, Risk, Unit Economics, required-research readiness,
+retained research-run status, missing required task IDs, core state, accepted
+Red Team state, and Key Decision `Evidence IDs` when authoritative. When every
+stage is complete it emits one `Workflow Status: COMPLETE` line. Otherwise it
+emits only the non-complete `UNRESOLVED`, `BLOCKED`, and `FAILED` stage records
+in canonical order, including retained failure kinds and `blocked_by`
+dependencies. A `COMPLETE` research run and `False` readiness remain visible
+as separate authoritative facts.
 
 Analytical sections use explicit fixed reader-facing labels for the supported
 field registry. They never expose internal `snake_case` names, reflect over
@@ -111,11 +117,16 @@ deduplicated and rendered in Evidence-ID order; membership is not a rank.
 Unreferenced current-run records remain in the Appendix.
 
 Key Uncertainties contains only explicit workflow `UNRESOLVED`, `BLOCKED`, or
-`FAILED` state, missing or unknown domain state, existing diagnostics/factors/
-reasons, unresolved scores or core thresholds, and unresolved Risk or Unit
-Economics state. Known fields use the same fixed reader-facing labels as the
-analytical projection. Entries use canonical structural order and are not
-compared using an invented severity model.
+`FAILED` state, false or invalid authoritative required-research readiness,
+retained research-run status, missing or failed required task IDs, and the
+matching existing task status and failure reasons, plus missing or unknown
+domain state, existing diagnostics/factors/reasons, unresolved scores or core
+thresholds, and unresolved Risk or Unit Economics state. Known fields use the
+same fixed reader-facing labels as the analytical projection. Research task
+projection uses task ID, source family, query intent, status, and existing
+failure reasons only; it does not fabricate provider operations, fallback
+state, credentials, or configuration. Entries use canonical structural order
+and are not compared using an invented severity model.
 
 ## Evidence Appendix and Traceability
 
@@ -138,7 +149,7 @@ complete Evidence Appendix remains lossless and contains every normalized
 Stage 3 record exactly once, including adverse Evidence.
 
 Equivalent structured inputs produce byte-identical output. Rendering performs
-no provider or network access, clock or randomness reads, persistence, LLM or
-asynchronous work, upstream policy execution, or report-specific Evidence
-acquisition. It is a one-way presentation boundary downstream of the
-structured workflow.
+no provider or network access, credential/configuration reads, clock or
+randomness reads, persistence, LLM or asynchronous work, upstream policy
+execution, or report-specific Evidence acquisition. It is a one-way
+presentation boundary downstream of the structured workflow.

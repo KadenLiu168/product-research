@@ -591,6 +591,31 @@ def _append_explicit_uncertainty(entries, prefix, output, finding_dimension=None
                 entries.append(f"{prefix} finding {index} {label}: {_value(value)}")
 
 
+def _append_research_uncertainty(entries, result):
+    research_run = result.research_run
+    if research_run is None:
+        entries.append("Research Run: unavailable")
+        return
+    missing_ids = tuple(research_run.missing_required_task_ids)
+    failed_ids = tuple(research_run.failed_task_ids)
+    entries.append(f"Research Run Status: {_value(research_run.status)}")
+    entries.append(f"Missing Required Task IDs: {_value(missing_ids)}")
+    if failed_ids:
+        entries.append(f"Failed Task IDs: {_value(failed_ids)}")
+    task_ids = set(missing_ids) | set(failed_ids)
+    for task_result in research_run.task_results:
+        if task_result.task.task_id not in task_ids:
+            continue
+        failure_reasons = tuple(failure.reason for failure in task_result.failures)
+        entries.append(
+            f"Research Task {task_result.task.task_id}: "
+            f"Source Family={_value(task_result.task.source_family)}; "
+            f"Query Intent={_value(task_result.task.query_intent)}; "
+            f"Status={_value(task_result.status)}; "
+            f"Failure Reasons={_value(failure_reasons)}"
+        )
+
+
 def _render_key_uncertainties(lines, result, state):
     entries = []
     for record in result.stage_trace:
@@ -601,6 +626,14 @@ def _render_key_uncertainties(lines, result, state):
             if record.blocked_by:
                 detail += "; blocked_by=" + ", ".join(value.value for value in record.blocked_by)
             entries.append(f"{record.stage.value}: {detail}")
+    research_run = result.research_run
+    if (
+        research_run is None
+        or research_run.status.value != "COMPLETE"
+        or research_run.missing_required_task_ids
+        or research_run.failed_task_ids
+    ):
+        _append_research_uncertainty(entries, result)
     if state.scores is None:
         entries.append("Scorecard: scores unavailable")
     else:
@@ -611,6 +644,14 @@ def _render_key_uncertainties(lines, result, state):
     if state.decision is None:
         entries.append("Final Decision: unavailable")
     else:
+        if state.decision.required_research_ready is not True:
+            entries.append(
+                "Required Research Readiness: "
+                + _value(state.decision.required_research_ready)
+            )
+            for reason in state.decision.reasons:
+                if reason.value.startswith("RESEARCH_READINESS_"):
+                    entries.append(f"Required Research Readiness Reason: {reason.value}")
         for item in state.decision.core_results:
             if item.outcome.value == "UNRESOLVED":
                 entries.append(f"Core Threshold {item.dimension.value}: UNRESOLVED")
@@ -661,6 +702,27 @@ def render_final_report(result: end_to_end_workflow.EndToEndWorkflowResult) -> s
             )
             lines.append(f"- Risk Gate: {_value(None if state.risk is None else state.risk.risk_gate)}")
             lines.append(f"- Unit Economics: {_value(None if state.economics is None else state.economics.outcome)}")
+            lines.append(
+                "- Required Research Readiness: "
+                + _value(
+                    None
+                    if state.decision is None
+                    else state.decision.required_research_ready
+                )
+            )
+            research_run = result.research_run
+            lines.append(
+                "- Research Run Status: "
+                + _value(None if research_run is None else research_run.status)
+            )
+            lines.append(
+                "- Missing Required Task IDs: "
+                + _value(
+                    None
+                    if research_run is None
+                    else research_run.missing_required_task_ids
+                )
+            )
             lines.append(
                 "- Core Threshold State: "
                 + (
@@ -714,6 +776,9 @@ def render_final_report(result: end_to_end_workflow.EndToEndWorkflowResult) -> s
         elif title == "Final Analysis Label":
             lines.append(f"- Final Analysis Label: {_value(None if state.decision is None else state.decision.label)}")
             if state.decision is not None:
+                lines.append(
+                    f"- Required Research Readiness: {_value(state.decision.required_research_ready)}"
+                )
                 lines.append(f"- Decision Reasons: {_value(state.decision.reasons)}")
         elif title == "Evidence Appendix":
             if not evidence_index:

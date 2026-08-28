@@ -58,6 +58,8 @@ class DecisionReason(_ClosedValue):
         "ECONOMICS_UNVIABLE",
         "ECONOMICS_BELOW_TARGET",
         "ECONOMICS_UNRESOLVED",
+        "RESEARCH_READINESS_INPUT_ERROR",
+        "RESEARCH_READINESS_INCOMPLETE",
         "INVALID_GO_THRESHOLD",
         "GO_THRESHOLD_MISSING",
         "AGGREGATE_BELOW_GO_THRESHOLD",
@@ -257,6 +259,7 @@ class DecisionResult:
     risk_gate: Optional[RiskGateState]
     unit_economics: Optional[UnitEconomicsResult]
     policy_threshold: Optional[Decimal]
+    required_research_ready: Optional[bool]
     reasons: Tuple[DecisionReason, ...]
     failed_core_dimensions: Tuple[Dimension, ...]
     unresolved_dimensions: Tuple[Dimension, ...]
@@ -285,6 +288,8 @@ class DecisionResult:
             raise TypeError("unit_economics must be a UnitEconomicsResult or None")
         if self.policy_threshold is not None:
             _require_finite_decimal(self.policy_threshold, "policy_threshold")
+        if self.required_research_ready is not None and type(self.required_research_ready) is not bool:
+            raise TypeError("required_research_ready must be a bool or None")
         for field_name in (
             "reasons",
             "failed_core_dimensions",
@@ -534,6 +539,15 @@ def _validate_policy(policy, reasons):
     return threshold
 
 
+def _validate_research_readiness(required_research_ready, reasons):
+    if type(required_research_ready) is not bool:
+        reasons.add(DecisionReason("RESEARCH_READINESS_INPUT_ERROR"))
+        return None
+    if not required_research_ready:
+        reasons.add(DecisionReason("RESEARCH_READINESS_INCOMPLETE"))
+    return required_research_ready
+
+
 def _fallback_result():
     core_results = tuple(
         CoreThresholdResult(dimension, None, threshold, CoreOutcome("UNRESOLVED"))
@@ -548,6 +562,7 @@ def _fallback_result():
         risk_gate=None,
         unit_economics=None,
         policy_threshold=None,
+        required_research_ready=None,
         reasons=(DecisionReason("CALCULATION_ERROR"),),
         failed_core_dimensions=(),
         unresolved_dimensions=(),
@@ -555,7 +570,14 @@ def _fallback_result():
     )
 
 
-def _evaluate(scores, weight_adjustments, risk_gate, unit_economics, policy):
+def _evaluate(
+    scores,
+    weight_adjustments,
+    risk_gate,
+    unit_economics,
+    policy,
+    required_research_ready,
+):
     reasons = set()
     valid_scores, score_values, unresolved_dimensions, valid_score_fields = _validate_scores(scores, reasons)
     final_weights = _validate_weights(weight_adjustments, reasons)
@@ -563,6 +585,9 @@ def _evaluate(scores, weight_adjustments, risk_gate, unit_economics, policy):
     valid_risk = _validate_risk(risk_gate, reasons)
     valid_economics, economics_outcome = _validate_economics(unit_economics, reasons)
     policy_threshold = _validate_policy(policy, reasons)
+    normalized_research_readiness = _validate_research_readiness(
+        required_research_ready, reasons
+    )
 
     aggregate_score = None
     if final_weights is not None and valid_scores is not None and not unresolved_dimensions:
@@ -587,6 +612,7 @@ def _evaluate(scores, weight_adjustments, risk_gate, unit_economics, policy):
         and not failed_core
         and not unresolved_core
         and policy_threshold is not None
+        and normalized_research_readiness is True
         and aggregate_score >= policy_threshold
     )
     hard_failure = (
@@ -617,6 +643,7 @@ def _evaluate(scores, weight_adjustments, risk_gate, unit_economics, policy):
         risk_gate=valid_risk,
         unit_economics=valid_economics,
         policy_threshold=policy_threshold,
+        required_research_ready=normalized_research_readiness,
         reasons=_sorted_reasons(reasons),
         failed_core_dimensions=failed_core,
         unresolved_dimensions=unresolved_dimensions,
@@ -630,9 +657,17 @@ def evaluate_scoring_decision(
     risk_gate,
     unit_economics,
     policy,
+    required_research_ready=None,
 ):
     """Evaluate explicit scores, weights, upstream gates, and decision policy."""
     try:
-        return _evaluate(scores, weight_adjustments, risk_gate, unit_economics, policy)
+        return _evaluate(
+            scores,
+            weight_adjustments,
+            risk_gate,
+            unit_economics,
+            policy,
+            required_research_ready,
+        )
     except Exception:
         return _fallback_result()

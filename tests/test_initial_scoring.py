@@ -419,6 +419,7 @@ class InitialScoringBoundaryTests(InitialScoringTestBase):
             self.score.RiskGateState("CLEAR"),
             self.economics_result(),
             self.score.DecisionPolicy(Decimal("70")),
+            required_research_ready=True,
         )
         self.assertIs(type(decision), self.score.DecisionResult)
 
@@ -437,6 +438,7 @@ class InitialScoringBoundaryTests(InitialScoringTestBase):
             self.score.RiskGateState("FATAL"),
             self.economics_result(),
             self.score.DecisionPolicy(Decimal("70")),
+            required_research_ready=True,
         )
         self.assertEqual(decision.risk_gate, self.score.RiskGateState("FATAL"))
         self.assertEqual(decision.label.value, "NO-GO")

@@ -984,6 +984,7 @@ class ArchitectureAndCompatibilityTests(RedTeamRevisionTestBase):
             self.risk.RiskGateState("CLEAR"),
             self.economics_result(),
             self.sd.DecisionPolicy(Decimal("0")),
+            required_research_ready=True,
         )
         self.assertIs(decision.scores, result.revised_scores)
 

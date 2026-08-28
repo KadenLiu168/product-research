@@ -138,6 +138,8 @@ class ScoringDecisionVocabularyAndValueTests(unittest.TestCase):
                 "ECONOMICS_UNVIABLE",
                 "ECONOMICS_BELOW_TARGET",
                 "ECONOMICS_UNRESOLVED",
+                "RESEARCH_READINESS_INPUT_ERROR",
+                "RESEARCH_READINESS_INCOMPLETE",
                 "INVALID_GO_THRESHOLD",
                 "GO_THRESHOLD_MISSING",
                 "AGGREGATE_BELOW_GO_THRESHOLD",
@@ -260,6 +262,7 @@ class ScoringDecisionWeightTests(unittest.TestCase):
             self.module.RiskGateState("CLEAR"),
             _economics_result("MEETS_TARGET"),
             self.module.DecisionPolicy(Decimal("70")),
+            required_research_ready=True,
         )
         extra = self.module.evaluate_scoring_decision(
             _scores(self.module),
@@ -267,6 +270,7 @@ class ScoringDecisionWeightTests(unittest.TestCase):
             self.module.RiskGateState("CLEAR"),
             _economics_result("MEETS_TARGET"),
             self.module.DecisionPolicy(Decimal("70")),
+            required_research_ready=True,
         )
 
         for result in (missing, extra):
@@ -283,11 +287,86 @@ class ScoringDecisionWeightTests(unittest.TestCase):
             self.module.RiskGateState("CLEAR"),
             _economics_result("MEETS_TARGET"),
             self.module.DecisionPolicy(Decimal("70")),
+            required_research_ready=True,
         )
 
     @staticmethod
     def _reason_values(result):
         return tuple(reason.value for reason in result.reasons)
+
+
+class ScoringDecisionReadinessTests(unittest.TestCase):
+    def setUp(self):
+        self.module = _scoring_module()
+
+    def evaluate(self, **kwargs):
+        return self.module.evaluate_scoring_decision(
+            _scores(self.module),
+            _weights(self.module),
+            kwargs.pop("risk", self.module.RiskGateState("CLEAR")),
+            kwargs.pop("economics", _economics_result("MEETS_TARGET")),
+            self.module.DecisionPolicy(Decimal("70")),
+            **kwargs,
+        )
+
+    def test_true_readiness_preserves_go_and_is_retained(self):
+        result = self.evaluate(required_research_ready=True)
+
+        self.assertEqual(result.label.value, "GO")
+        self.assertIs(result.required_research_ready, True)
+
+    def test_false_readiness_caps_an_eligible_result(self):
+        result = self.evaluate(required_research_ready=False)
+
+        self.assertEqual(result.label.value, "CONDITIONAL GO")
+        self.assertIs(result.required_research_ready, False)
+        self.assertEqual(
+            tuple(reason.value for reason in result.reasons),
+            ("RESEARCH_READINESS_INCOMPLETE",),
+        )
+
+    def test_missing_and_malformed_readiness_fail_closed_without_coercion(self):
+        missing = self.evaluate()
+        malformed = tuple(self.evaluate(required_research_ready=value) for value in (None, 0, 1, "true"))
+
+        for result in (missing, *malformed):
+            self.assertIsNone(result.required_research_ready)
+            self.assertNotEqual(result.label.value, "GO")
+            self.assertIn(
+                "RESEARCH_READINESS_INPUT_ERROR",
+                tuple(reason.value for reason in result.reasons),
+            )
+            self.assertNotIn(
+                "RESEARCH_READINESS_INCOMPLETE",
+                tuple(reason.value for reason in result.reasons),
+            )
+
+    def test_higher_precedence_gates_override_incomplete_readiness(self):
+        cases = (
+            (self.module.RiskGateState("FATAL"), _economics_result("MEETS_TARGET"), "NO-GO"),
+            (self.module.RiskGateState("REVIEW_REQUIRED"), _economics_result("MEETS_TARGET"), "RISK REVIEW"),
+            (self.module.RiskGateState("CLEAR"), _economics_result("UNVIABLE"), "NO-GO"),
+        )
+        for risk, economics, label in cases:
+            with self.subTest(label=label):
+                result = self.evaluate(
+                    risk=risk,
+                    economics=economics,
+                    required_research_ready=False,
+                )
+                self.assertEqual(result.label.value, label)
+                self.assertIn(
+                    "RESEARCH_READINESS_INCOMPLETE",
+                    tuple(reason.value for reason in result.reasons),
+                )
+
+    def test_readiness_reasons_are_duplicate_free_and_replay_stable(self):
+        first = self.evaluate(required_research_ready=None)
+        second = self.evaluate(required_research_ready=None)
+
+        self.assertEqual(first, second)
+        reasons = tuple(reason.value for reason in first.reasons)
+        self.assertEqual(reasons.count("RESEARCH_READINESS_INPUT_ERROR"), 1)
 
 
 class ScoringDecisionAggregateAndCoreTests(unittest.TestCase):
@@ -393,6 +472,7 @@ class ScoringDecisionAggregateAndCoreTests(unittest.TestCase):
             self.module.RiskGateState("CLEAR"),
             _economics_result("MEETS_TARGET"),
             self.module.DecisionPolicy(threshold),
+            required_research_ready=True,
         )
 
     @staticmethod
@@ -420,6 +500,7 @@ class ScoringDecisionUpstreamAndPolicyTests(unittest.TestCase):
                     None,
                     _economics_result("MEETS_TARGET"),
                     self.module.DecisionPolicy(Decimal("70")),
+                    required_research_ready=True,
                 )
             else:
                 result = self._evaluate(risk=risk)
@@ -491,6 +572,7 @@ class ScoringDecisionUpstreamAndPolicyTests(unittest.TestCase):
         policy=None,
         threshold=Decimal("70"),
         threshold_score=Decimal("80"),
+        required_research_ready=True,
     ):
         return self.module.evaluate_scoring_decision(
             _scores(self.module, threshold_score),
@@ -498,6 +580,7 @@ class ScoringDecisionUpstreamAndPolicyTests(unittest.TestCase):
             self.module.RiskGateState("CLEAR") if risk is None else risk,
             _economics_result("MEETS_TARGET") if economics is None else economics,
             self.module.DecisionPolicy(threshold) if policy is None else policy,
+            required_research_ready=required_research_ready,
         )
 
     @staticmethod
@@ -511,6 +594,7 @@ class ScoringDecisionUpstreamAndPolicyTests(unittest.TestCase):
             self.module.RiskGateState("CLEAR"),
             _economics_result("MEETS_TARGET"),
             self.module.DecisionPolicy(None),
+            required_research_ready=True,
         )
         self.assertEqual(result.label.value, "CONDITIONAL GO")
 
@@ -554,6 +638,7 @@ class ScoringDecisionPrecedenceAndDiagnosticsTests(unittest.TestCase):
             self.module.RiskGateState("FATAL"),
             _economics_result("MEETS_TARGET"),
             self.module.DecisionPolicy(Decimal("70")),
+            required_research_ready=True,
         )
 
         self.assertEqual(result.label.value, "NO-GO")
@@ -568,6 +653,7 @@ class ScoringDecisionPrecedenceAndDiagnosticsTests(unittest.TestCase):
             None,
             _economics_result("BELOW_TARGET"),
             self.module.DecisionPolicy(None),
+            required_research_ready=True,
         )
 
         self.assertEqual(result.label.value, "RISK REVIEW")
@@ -589,6 +675,7 @@ class ScoringDecisionPrecedenceAndDiagnosticsTests(unittest.TestCase):
             self.module.RiskGateState("CLEAR"),
             _economics_result("MEETS_TARGET"),
             self.module.DecisionPolicy(Decimal("70")),
+            required_research_ready=True,
         )
 
         self.assertEqual(result.label.value, "CONDITIONAL GO")
@@ -629,6 +716,7 @@ class ScoringDecisionPrecedenceAndDiagnosticsTests(unittest.TestCase):
             object(),
             object(),
             object(),
+            required_research_ready=True,
         )
         reasons = self._reason_values(result)
 
@@ -644,13 +732,17 @@ class ScoringDecisionPrecedenceAndDiagnosticsTests(unittest.TestCase):
         self.assertEqual(result.scores.market_demand.confidence, self.module.Confidence("Low"))
         self.assertFalse(hasattr(result, "confidence"))
 
-    def _evaluate(self, scores=None, risk=None, economics=None, policy=None):
+    def _evaluate(
+        self, scores=None, risk=None, economics=None, policy=None,
+        required_research_ready=True,
+    ):
         return self.module.evaluate_scoring_decision(
             scores or _scores(self.module),
             _weights(self.module),
             self.module.RiskGateState("CLEAR") if risk is None else risk,
             _economics_result("MEETS_TARGET") if economics is None else economics,
             self.module.DecisionPolicy(Decimal("70")) if policy is None else policy,
+            required_research_ready=required_research_ready,
         )
 
     @staticmethod

@@ -175,6 +175,7 @@ class WorkflowTestBase(unittest.TestCase):
             "decision_policy": importlib.import_module(
                 "product_research.scoring_decision"
             ).DecisionPolicy(Decimal("60")),
+            "required_research_semantically_satisfied": True,
             "red_team_inputs": self.workflow.RedTeamReviewInputs((), (), (), ()),
         }
         values.update(overrides)
@@ -258,6 +259,7 @@ class WorkflowControlPlaneTests(WorkflowTestBase):
             planner=counted_planner,
             acquire=acquire,
             normalize=normalize,
+            required_research_semantically_satisfied=True,
         )
         self.assertIsNone(result.subject)
         self.assertEqual(
@@ -774,10 +776,10 @@ class WorkflowCompositionTests(WorkflowTestBase):
         evaluate = self.workflow.scoring_decision.evaluate_scoring_decision
         call_count = 0
 
-        def incoherent_final_decision(*args):
+        def incoherent_final_decision(*args, **kwargs):
             nonlocal call_count
             call_count += 1
-            decision = evaluate(*args)
+            decision = evaluate(*args, **kwargs)
             if call_count == 2:
                 return dataclasses.replace(
                     decision,
@@ -890,6 +892,86 @@ class WorkflowCompositionTests(WorkflowTestBase):
         self.assertIs(decision_mock.call_args_list[1].args[1], weights)
         self.assertIs(decision_mock.call_args_list[0].args[4], policy)
         self.assertIs(decision_mock.call_args_list[1].args[4], policy)
+
+    def test_initial_and_final_decisions_reuse_derived_required_research_readiness(self):
+        scores = self.complete_scores()
+        cases = (
+            ({}, True, True),
+            ({"partial_coverage": True}, True, False),
+            ({}, False, False),
+            ({}, None, None),
+            ({}, "true", None),
+        )
+        for fixture_overrides, semantic, expected in cases:
+            with self.subTest(semantic=semantic, fixture_overrides=fixture_overrides):
+                with mock.patch.object(
+                    self.workflow.initial_scoring,
+                    "evaluate_initial_scoring",
+                    return_value=scores,
+                ), mock.patch.object(
+                    self.workflow.scoring_decision,
+                    "evaluate_scoring_decision",
+                    wraps=self.workflow.scoring_decision.evaluate_scoring_decision,
+                ) as decision_mock:
+                    result = self.execute_workflow(
+                        **fixture_overrides,
+                        required_research_semantically_satisfied=semantic,
+                    )
+
+                self.assertEqual(decision_mock.call_count, 2)
+                readiness_values = tuple(
+                    call.kwargs["required_research_ready"]
+                    for call in decision_mock.call_args_list
+                )
+                self.assertEqual(readiness_values, (expected, expected))
+                self.assertIs(result.final_decision.required_research_ready, expected)
+                if expected is None:
+                    self.assertIn(
+                        "RESEARCH_READINESS_INPUT_ERROR",
+                        tuple(reason.value for reason in result.final_decision.reasons),
+                    )
+                else:
+                    self.assertEqual(
+                        result.final_decision.label.value,
+                        "GO" if expected else "CONDITIONAL GO",
+                    )
+
+    def test_failed_research_execution_never_derives_ready(self):
+        def planner(_):
+            raise RuntimeError("planned failure")
+
+        _, research_run = self.execute_with_captured_research(planner=planner)
+
+        self.assertEqual(research_run.status.value, "FAILED")
+        self.assertIs(
+            self.workflow._derive_required_research_readiness(research_run, True),
+            False,
+        )
+        self.assertIs(
+            self.workflow._derive_required_research_readiness(research_run, False),
+            False,
+        )
+
+    def test_invalid_retained_research_result_never_derives_ready(self):
+        _, valid_run = self.execute_with_captured_research()
+        invalid_run = object.__new__(self.research.ResearchRunResult)
+        for field in dataclasses.fields(valid_run):
+            object.__setattr__(invalid_run, field.name, getattr(valid_run, field.name))
+        object.__setattr__(
+            invalid_run,
+            "required_task_ids",
+            (*valid_run.required_task_ids, "ghost-required"),
+        )
+
+        with mock.patch.object(
+            self.workflow.research_orchestration,
+            "run_research",
+            return_value=invalid_run,
+        ):
+            result = self.execute_workflow()
+
+        self.assertIs(result.final_decision.required_research_ready, False)
+        self.assertEqual(result.final_decision.label.value, "CONDITIONAL GO")
 
     def test_accepted_score_revision_changes_only_final_scores_and_keeps_initial_decision(self):
         scoring = importlib.import_module("product_research.scoring_decision")

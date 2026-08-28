@@ -167,6 +167,7 @@ class FinalReportTestBase(unittest.TestCase):
             risk.risk_gate,
             economics,
             self.scoring.DecisionPolicy(Decimal("60")),
+            required_research_ready=True,
         )
         final_state = self.workflow.WorkflowFinalState(
             revised_scores, risk, economics, decision
@@ -273,6 +274,165 @@ class FinalReportContractTests(FinalReportTestBase):
             "Key Decision Evidence IDs: E001, E002",
         ):
             self.assertIn(expected, summary)
+
+    def test_summary_projects_authoritative_readiness_and_research_run_state(self):
+        complete = self.complete_result()
+        final_stage = complete.stage(self.workflow.WorkflowStage.FINAL_DECISION)
+        decision = dataclasses.replace(
+            final_stage.output.decision,
+            label=self.scoring.DecisionLabel("CONDITIONAL GO"),
+            required_research_ready=False,
+            reasons=(self.scoring.DecisionReason("RESEARCH_READINESS_INCOMPLETE"),),
+        )
+        result = dataclasses.replace(
+            complete,
+            stages=(
+                *complete.stages[:-1],
+                dataclasses.replace(
+                    final_stage,
+                    output=dataclasses.replace(final_stage.output, decision=decision),
+                ),
+            ),
+        )
+
+        report = self.report.render_final_report(result)
+        summary = report.split("## 2. Market Demand", 1)[0].split(
+            "## 1. Executive Summary", 1
+        )[1]
+
+        self.assertIn("Required Research Readiness: False", summary)
+        self.assertIn("Research Run Status: COMPLETE", summary)
+        self.assertIn("Missing Required Task IDs: NONE", summary)
+        self.assertIn("Final Analysis Label: CONDITIONAL GO", summary)
+
+    def test_key_uncertainties_projects_missing_research_task_details_without_fabrication(self):
+        complete = self.complete_result()
+        run = complete.research_run
+        task = self.research.ResearchTask(
+            "task-02",
+            "What remains unknown?",
+            self.research.SourceFamily("SEARCH"),
+            "missing_required_coverage",
+            importlib.import_module("product_research.evidence_policy").EvidenceKind("market"),
+            True,
+        )
+        failure = self.research.ResearchFailure(
+            self.research.FailureReason("ACQUISITION_UNAVAILABLE"), task.task_id
+        )
+        partial_run = self.research.ResearchRunResult(
+            run.objective,
+            self.research.ResearchPlan(run.plan.objective_id, (*run.plan.tasks, task)),
+            (
+                run.task_results[0],
+                self.research.TaskResult(
+                    task,
+                    self.research.TaskStatus("UNAVAILABLE"),
+                    failures=(failure,),
+                ),
+            ),
+            run.evidence,
+            (failure,),
+            ("task-01", "task-02"),
+            ("task-01",),
+            ("task-02",),
+            ("task-02",),
+            self.research.RunStatus("PARTIAL"),
+        )
+        stages = list(complete.stages)
+        research_index = tuple(self.workflow.WorkflowStage).index(
+            self.workflow.WorkflowStage.RESEARCH_EVIDENCE
+        )
+        stages[research_index] = dataclasses.replace(
+            stages[research_index],
+            status=self.workflow.WorkflowStageStatus.UNRESOLVED,
+            output=partial_run,
+        )
+        final_stage = complete.stage(self.workflow.WorkflowStage.FINAL_DECISION)
+        decision = dataclasses.replace(
+            final_stage.output.decision,
+            label=self.scoring.DecisionLabel("CONDITIONAL GO"),
+            required_research_ready=False,
+            reasons=(self.scoring.DecisionReason("RESEARCH_READINESS_INCOMPLETE"),),
+        )
+        stages[-1] = dataclasses.replace(
+            final_stage,
+            output=dataclasses.replace(final_stage.output, decision=decision),
+        )
+
+        report = self.report.render_final_report(
+            self.workflow.EndToEndWorkflowResult(complete.subject, tuple(stages))
+        )
+        uncertainty = report.split("## 13. Red Team Findings", 1)[0].split(
+            "## 12. Key Uncertainties", 1
+        )[1]
+
+        for expected in (
+            "Research Run Status: PARTIAL",
+            "Missing Required Task IDs: task-02",
+            "Failed Task IDs: task-02",
+            "Research Task task-02: Source Family=SEARCH; Query Intent=missing_required_coverage; Status=UNAVAILABLE; Failure Reasons=ACQUISITION_UNAVAILABLE",
+            "Required Research Readiness: False",
+        ):
+            self.assertIn(expected, uncertainty)
+        for fabricated in ("Provider Operation", "Provider Task ID", "Fallback Used", "Credentials"):
+            self.assertNotIn(fabricated, uncertainty)
+
+    def test_key_uncertainties_projects_optional_task_failure_from_complete_run(self):
+        complete = self.complete_result()
+        run = complete.research_run
+        task = self.research.ResearchTask(
+            "task-optional",
+            "What optional detail remains unknown?",
+            self.research.SourceFamily("SEARCH"),
+            "optional_context",
+            importlib.import_module("product_research.evidence_policy").EvidenceKind("market"),
+            False,
+        )
+        failure = self.research.ResearchFailure(
+            self.research.FailureReason("ACQUISITION_UNAVAILABLE"), task.task_id
+        )
+        research_run = self.research.ResearchRunResult(
+            run.objective,
+            self.research.ResearchPlan(run.plan.objective_id, (*run.plan.tasks, task)),
+            (
+                run.task_results[0],
+                self.research.TaskResult(
+                    task,
+                    self.research.TaskStatus("UNAVAILABLE"),
+                    failures=(failure,),
+                ),
+            ),
+            run.evidence,
+            (failure,),
+            run.required_task_ids,
+            run.covered_required_task_ids,
+            (),
+            (task.task_id,),
+            self.research.RunStatus("COMPLETE"),
+        )
+        stages = list(complete.stages)
+        research_index = tuple(self.workflow.WorkflowStage).index(
+            self.workflow.WorkflowStage.RESEARCH_EVIDENCE
+        )
+        stages[research_index] = dataclasses.replace(
+            stages[research_index], output=research_run
+        )
+
+        report = self.report.render_final_report(
+            self.workflow.EndToEndWorkflowResult(complete.subject, tuple(stages))
+        )
+        uncertainty = report.split("## 13. Red Team Findings", 1)[0].split(
+            "## 12. Key Uncertainties", 1
+        )[1]
+
+        self.assertIn("Research Run Status: COMPLETE", uncertainty)
+        self.assertIn("Failed Task IDs: task-optional", uncertainty)
+        self.assertIn(
+            "Research Task task-optional: Source Family=SEARCH; "
+            "Query Intent=optional_context; Status=UNAVAILABLE; "
+            "Failure Reasons=ACQUISITION_UNAVAILABLE",
+            uncertainty,
+        )
 
     def test_incomplete_summary_lists_only_non_complete_stages_with_detail(self):
         result = self.complete_result()
@@ -898,3 +1058,18 @@ class FinalReportContractTests(FinalReportTestBase):
             self.report.render_final_report(first)
         with self.assertRaises(TypeError):
             self.report.render_final_report(object())
+
+    def test_rendering_does_not_read_or_render_credentials_or_provider_state(self):
+        with mock.patch("builtins.open", side_effect=AssertionError("report must not read files")), mock.patch.dict(
+            "os.environ",
+            {
+                "DATAFORSEO_LOGIN": "secret-login",
+                "DATAFORSEO_PASSWORD": "secret-password",
+            },
+        ):
+            report = self.report.render_final_report(self.complete_result())
+
+        self.assertNotIn("secret-login", report)
+        self.assertNotIn("secret-password", report)
+        for label in ("Provider Operation", "Provider Task ID", "Fallback Used"):
+            self.assertNotIn(label, report)

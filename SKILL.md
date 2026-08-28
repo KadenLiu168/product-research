@@ -19,6 +19,7 @@ Evaluate a candidate product supplied by the user. Do not use this version to di
 - After Phase 6 results and Unit Economics are available, the Agent/caller may submit explicit qualitative judgments to `product_research/initial_scoring.py`; it validates ownership, Evidence-ID traceability, nested uncertainty, and Confidence ceilings, then emits the existing eight-slot `DimensionScores`. It does not generate or infer qualitative judgments.
 - `product_research/initial_scoring.py` maps retained Contribution Margin relative to the caller-owned Minimum Viability and Dynamic Target thresholds using its frozen Decimal rubric; it does not recalculate economics or rerun either gate.
 - When normalized scores, explicit adjustments, upstream gate results, and an explicit GO threshold are available, route deterministic scoring and analytical decision execution to `product_research/scoring_decision.py`; it does not generate scores or policy inputs.
+- Before decision execution, the caller must provide an exact-boolean semantic-sufficiency judgment for required research. The workflow combines it with retained Stage 3 `ResearchRunResult` completion and missing-task coverage into one effective readiness value; scoring consumes that value without inspecting research, provider, acquisition, or Evidence state. Missing or malformed judgments fail closed, and incomplete readiness caps an otherwise eligible result at `CONDITIONAL GO`.
 - After Initial Scoring, the Agent/caller owns adversarial reasoning and any upstream re-evaluation. Pass only explicit canonical findings, per-dimension proposals, and complete revised Risk or Unit Economics results to `product_research/red_team_revision.py`; it authorizes traceable changes and preserves history but does not generate objections, interpret Evidence, rerun analysis, calculate economics, or choose a final decision.
 - For full deterministic execution with explicit normalized inputs, route the fixed 16-stage composition through `product_research/end_to_end_workflow.py`; it retains the existing authoritative values and cumulative stage trace, but does not generate judgments, acquire Evidence, change policy, or render reports.
 - After Stage 16, route the immutable `EndToEndWorkflowResult` to `product_research/final_report_generation.py` for the canonical 15-section Markdown report and complete Evidence Appendix. This downstream boundary only projects retained authoritative values and does not execute upstream policy.
@@ -153,10 +154,10 @@ Follow this order:
 10. Evaluate Brand Potential.
 11. Evaluate Content Potential.
 12. Produce explicit Agent/caller qualitative judgments where relevant Evidence supports them, then pass Phase 6 results, Unit Economics, and those judgments through Initial Scoring.
-13. Check core-dimension thresholds.
+13. Check core-dimension thresholds and pass the workflow-derived effective required-research readiness to the existing decision executor.
 14. Accept explicit current-run Evidence-backed Red Team review inputs.
 15. Apply accepted Red Team revisions through the existing revision boundary.
-16. Resolve authoritative post-Red-Team state and run the final scoring decision.
+16. Resolve authoritative post-Red-Team state and run the final scoring decision with the exact same effective required-research readiness and decision policy used at Stage 13.
 
 Do not skip an earlier stage merely because a later-stage answer appears intuitive. If evidence is insufficient for a stage, record the uncertainty and its downstream effect instead of inventing completion.
 

@@ -429,6 +429,7 @@ def _workflow_kwargs(*, include_evidence=True, risk_classification="NORMAL", eco
         "qualitative_judgments": _judgments(),
         "weight_adjustments": scoring_decision.WeightAdjustments(*(Decimal("0"),) * 8),
         "decision_policy": scoring_decision.DecisionPolicy(Decimal("60")),
+        "required_research_semantically_satisfied": True,
         "red_team_inputs": end_to_end_workflow.RedTeamReviewInputs((), (), (), ()),
     }
     kwargs.update(values)

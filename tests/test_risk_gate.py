@@ -199,6 +199,7 @@ class RiskGateBoundaryRegressionTests(unittest.TestCase):
                     analysis.risk_gate,
                     object(),
                     object(),
+                    required_research_ready=True,
                 )
                 reasons = tuple(reason.value for reason in result.reasons)
                 self.assertNotIn("RISK_INPUT_ERROR", reasons)

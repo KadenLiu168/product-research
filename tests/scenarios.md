@@ -788,6 +788,27 @@ These scenarios cover the explicit ECO-21 Brand Potential and Content Potential 
 - **WHEN** equivalent propositions, Evidence index entries, relations, independence assignments, and missing-information entries are reordered
 - **THEN** the result replays with equivalent ordered findings, coverage, duplicate keys, diagnostics, IDs, Confidence, and nested Assessments
 
+## ECO-61 Required Research Readiness Acceptance Scenarios
+
+These provider-neutral scenarios cover the narrow readiness integration between
+the retained Stage 3 research result, caller-owned semantic sufficiency, the
+existing decision executor, and the downstream report. They do not add a
+research provider, Evidence interpretation, workflow stage, decision label, or
+report section.
+
+- **RED WHEN** Stage 3 execution is `PARTIAL` or `FAILED`, or its retained run has missing required task IDs, even when the caller supplies semantic sufficiency `true`
+- **THEN** effective required-research readiness is `false`, and an otherwise eligible decision cannot be `GO`
+- **GREEN WHEN** Stage 3 is `COMPLETE` with no missing required task IDs and the caller supplies semantic sufficiency `true`
+- **THEN** effective readiness is `true`; caller semantic sufficiency is explicit and is never inferred from provider or Evidence success
+- **WHEN** Stage 3 is complete but the caller judges the declared Evidence need semantically insufficient, including after an approved fallback
+- **THEN** effective readiness is `false`, `CONDITIONAL GO` precedence remains authoritative, and no provider-specific readiness state is invented
+- **WHEN** the caller omits or supplies a non-boolean semantic judgment
+- **THEN** the existing decision executor retains `RESEARCH_READINESS_INPUT_ERROR` and cannot produce `GO`
+- **WHEN** initial and final decisions execute in one fixed 16-stage workflow
+- **THEN** both existing executor calls receive the identical derived readiness and decision policy; Red Team input cannot override either value
+- **WHEN** the report renders readiness and research state for a non-Amazon, non-DataForSEO run or an offline/no-charge deterministic fixture
+- **THEN** it projects only authoritative readiness, run status, missing task IDs, and existing structured task failures without provider access, credentials, fallback fabrication, or scoring-policy re-execution
+
 ## ECO-37 End-to-End Workflow Acceptance Scenarios
 
 These scenarios cover the fixed deterministic coordinator in `product_research/end_to_end_workflow.py`. The caller supplies the normalized subject, research callbacks, semantic analysis inputs, judgments, policy objects, and explicit Red Team review values. The coordinator only routes existing authoritative boundaries and returns structured state; it does not acquire data, infer judgments, or render a report.

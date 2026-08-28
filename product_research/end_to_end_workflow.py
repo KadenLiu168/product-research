@@ -521,6 +521,24 @@ def _red_team_inputs(
     return None
 
 
+def _derive_required_research_readiness(research_run, semantic_sufficiency):
+    if type(semantic_sufficiency) is not bool:
+        return None
+    if type(research_run) is not research_orchestration.ResearchRunResult:
+        return False
+    try:
+        research_orchestration.ResearchRunResult.__post_init__(research_run)
+        status = research_run.status
+        missing_required_task_ids = research_run.missing_required_task_ids
+    except (AttributeError, TypeError, ValueError):
+        return False
+    if type(status) is not research_orchestration.RunStatus:
+        return False
+    if type(missing_required_task_ids) is not tuple:
+        return False
+    return status.value == "COMPLETE" and not missing_required_task_ids and semantic_sufficiency
+
+
 def run_end_to_end_workflow(
     candidate_product=None,
     target_market=None,
@@ -555,6 +573,7 @@ def run_end_to_end_workflow(
     qualitative_judgments=(),
     weight_adjustments=None,
     decision_policy=None,
+    required_research_semantically_satisfied=None,
     red_team_inputs=None,
     baseline_evidence_ids=None,
     red_team_evidence_ids=None,
@@ -607,6 +626,9 @@ def run_end_to_end_workflow(
     )
     evidence_index = {value.id: value for value in evidence if type(value) is Evidence}
     evidence_available = bool(evidence_index)
+    required_research_ready = _derive_required_research_readiness(
+        research_run, required_research_semantically_satisfied
+    )
 
     if evidence_available:
         records[WorkflowStage.RISK_COMPLIANCE] = _invoke(
@@ -726,6 +748,7 @@ def run_end_to_end_workflow(
                 initial_risk.risk_gate,
                 records[WorkflowStage.UNIT_ECONOMICS].output,
                 decision_policy,
+                required_research_ready=required_research_ready,
             ),
         )
 
@@ -818,6 +841,7 @@ def run_end_to_end_workflow(
                 final_risk.risk_gate,
                 final_economics,
                 decision_policy,
+                required_research_ready=required_research_ready,
             ),
         )
         if final_decision.status is WorkflowStageStatus.FAILED:

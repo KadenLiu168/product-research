@@ -85,6 +85,7 @@ class V1EvaluationSuiteTests(unittest.TestCase):
             scoring_decision.RiskGateState("CLEAR"),
             fixture.economics_result,
             scoring_decision.DecisionPolicy(Decimal("60")),
+            required_research_ready=True,
         )
         self.assertGreaterEqual(result.aggregate_score, result.policy_threshold)
         self.assertNotEqual(result.label.value, "GO")
@@ -212,6 +213,7 @@ class V1EvaluationSuiteTests(unittest.TestCase):
             scoring_decision.RiskGateState("CLEAR"),
             failed_economics_fixture.economics_result,
             scoring_decision.DecisionPolicy(Decimal("60")),
+            required_research_ready=True,
         )
         for result in (high_risk.final_decision, failed_economics):
             self.assertGreaterEqual(
@@ -238,6 +240,7 @@ class V1EvaluationSuiteTests(unittest.TestCase):
             scoring_decision.RiskGateState("CLEAR"),
             fixture.economics_result,
             scoring_decision.DecisionPolicy(Decimal("60")),
+            required_research_ready=True,
         )
         self.assertEqual(result.label.value, "CONDITIONAL GO")
         self.assertEqual(result.core_results[0].outcome.value, "FAIL")
