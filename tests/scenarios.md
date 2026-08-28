@@ -203,6 +203,107 @@ These scenarios cover the fixed family-level composition in `product_research/re
 - **WHEN** the adapter module and current capability routing are inspected
 - **THEN** they expose family-level composition only; provider-backed acquisition, scrapers, network/browser access, credentials, retries, persistence, analysis, scoring, Risk, Red Team, reporting, and recommendations remain unavailable
 
+## ECO-60 Provider-First Evidence Acquisition Policy Acceptance Scenarios
+
+These are the RED/GREEN Agent-behavior scenarios for the provider-first acquisition policy. The Agent/caller owns Evidence-need interpretation, operation selection, semantic coverage judgment, and fallback approval; existing planning, acquisition, normalization, Evidence, and domain-methodology boundaries remain authoritative. They do not add a production policy object or grant live/billable research capability.
+
+### Explicit preference and irrelevance
+
+- **WHEN** a declared Amazon marketplace, competitor, or listing-oriented quantitative Evidence need is directly addressed by `amazon_products_live`
+- **THEN** the Agent explicitly selects `amazon_products_live` as the preferred configured structured acquisition
+
+- **WHEN** a declared Amazon search-demand Evidence need is addressed by `amazon_bulk_search_volume_live`
+- **THEN** the Agent explicitly selects `amazon_bulk_search_volume_live` as the preferred configured structured acquisition
+
+- **WHEN** a declared broader search-demand or trend Evidence need is addressed by a configured SEARCH capability
+- **THEN** the Agent explicitly selects `google_ads_search_volume_live` or `google_trends_explore_live` according to the declared need
+
+- **WHEN** an Amazon task has no Evidence need addressed by the supported DataForSEO operations
+- **THEN** no DataForSEO operation is selected merely because the task or marketplace mentions Amazon
+
+- **WHEN** a material Evidence need is outside the explicit supported preference rules
+- **THEN** the Agent uses the existing provider-neutral source families without inventing a preferred provider or provider-specific core field
+
+### Non-billable preflight and primary ordering
+
+- **WHEN** a preferred structured acquisition is considered before substitution
+- **THEN** the Agent/caller checks the selected configuration, enabled family, explicit typed planning inputs/settings, transport-free compilation, and existing runtime/provider availability without making a live request or exposing credentials
+
+- **WHEN** preflight validates a preferred acquisition as usable
+- **THEN** that acquisition is attempted before any source proposed as an equivalent substitute, without automatic discovery, ranking, retry, or fallback
+
+- **WHEN** preflight finds a disabled/unavailable provider, unsupported operation, invalid or missing planning input, compilation error, or unavailable runtime path
+- **THEN** the capability gap is surfaced without transport, network, browser, credential disclosure, or billable request
+
+### Execution state and semantic coverage
+
+- **WHEN** the preferred acquisition returns `SUCCESS` and its normalized Evidence is explicitly sufficient for the declared need
+- **THEN** research continues with the original acquisition result and existing Evidence semantics
+
+- **WHEN** the preferred acquisition returns valid `SUCCESS` with zero findings
+- **THEN** execution remains `SUCCESS`, no placeholder Evidence is fabricated, and the declared need remains unresolved
+
+- **WHEN** the preferred acquisition returns `SUCCESS` with usable findings that do not sufficiently cover the declared need
+- **THEN** the acquisition result and Evidence remain intact while a separate semantic coverage gap is surfaced
+
+- **WHEN** the preferred acquisition returns `FAILED` or raises through the existing acquisition boundary
+- **THEN** its existing failure or exception outcome is preserved and is not reinterpreted as Evidence sufficiency or silently repaired
+
+### Complementary Evidence versus substitution fallback
+
+- **WHEN** an additional acquisition is intentionally planned for an independent signal, cross-validation, or a separate Evidence need
+- **THEN** it may proceed without fallback approval and remains complementary, regardless of whether the preferred acquisition exists or succeeds
+
+- **WHEN** independently collected Evidence already exists before a preferred-acquisition gap is encountered
+- **THEN** it remains usable under its actual provenance and is not discarded or relabeled as newly initiated fallback
+
+### Approval disclosure and silent-fallback prevention
+
+- **WHEN** the preferred acquisition is disabled, unavailable, unusable, or fails
+- **THEN** the Agent surfaces the gap and does not initiate an equivalent substitution fallback before explicit user approval
+
+- **WHEN** the preferred acquisition succeeds with zero findings or explicitly insufficient semantic coverage and substitution is proposed
+- **THEN** the preserved `SUCCESS` and separate coverage gap are surfaced, and fallback still requires explicit user approval
+
+- **WHEN** the Agent asks for approval to initiate substitution fallback
+- **THEN** the request identifies the affected task or Evidence need, preferred source family and operation, execution or coverage state, reason, missing coverage, proposed fallback, and expected impact on directness, source quality, Confidence, or coverage
+
+- **WHEN** an approval request is rendered
+- **THEN** it contains no credentials or secret-bearing configuration
+
+### Approved fallback and Evidence truth
+
+- **WHEN** the user explicitly approves the proposed fallback
+- **THEN** the fallback may proceed through an appropriate existing acquisition path or available tool, but approval alone does not satisfy the preferred acquisition or Evidence need
+
+- **WHEN** approved fallback Evidence does not sufficiently address the same declared need
+- **THEN** its actual source/provenance and Evidence semantics are retained and the need remains unresolved
+
+- **WHEN** approved fallback Evidence explicitly addresses the same declared need and is explicitly judged sufficient under existing methodology
+- **THEN** it may satisfy that need while the substitution, quality impact, and original preferred-acquisition gap remain visible
+
+- **WHEN** approved fallback directly obtains data from an identified source, produces a bounded inference, or deterministically derives a value
+- **THEN** the resulting Evidence remains respectively `Observed`, `Estimated`, or `Calculated` under existing Evidence Policy, without an automatic Evidence status, Tier, or Confidence upgrade
+
+- **WHEN** approved fallback does not support a fact
+- **THEN** the fact remains `Unknown` or otherwise unresolved rather than being fabricated from approval or provider brand
+
+### Rejected fallback and ECO-61 handoff
+
+- **WHEN** the user rejects the proposed substitution fallback
+- **THEN** no fallback acquisition occurs; unsupported facts remain unavailable or `Unknown`, the original gap remains visible, and unrelated independent research may continue
+
+- **WHEN** a required Evidence need remains unresolved after preferred acquisition and any approved fallback
+- **THEN** ECO-60 preserves that explicit unresolved state for later ECO-61 consumption without capping a decision or defining final readiness behavior
+
+### Architecture and verification boundaries
+
+- **WHEN** repository dependencies and contracts are inspected after implementation
+- **THEN** `ResearchTask`, `SourceFamily`, acquisition statuses, `AcquisitionResult`, `RawFinding`, normalization, Evidence status/Tier/Confidence/provenance, required-task coverage, and domain-methodology ownership remain unchanged; no provider-specific core import/field, operation inference, registry/ranking engine, generic coverage engine, new status, or workflow stage is added
+
+- **WHEN** the provider-first scenarios and existing regression suites run
+- **THEN** verification remains offline, deterministic, credential-independent, browser-free, secret-safe, and unable to incur provider charges
+
 ## Evidence Policy Validation Acceptance Scenarios
 
 These are the acceptance scenarios for the `evidence-policy-validation` capability. They state the observable contract shared by the validator and the focused unit tests in `tests/test_evidence_policy.py`. Validation is deterministic, read-only, and fail closed: it never mutates Evidence, fills missing metadata, upgrades a tier or status, guesses a source classification, or consults a system clock.

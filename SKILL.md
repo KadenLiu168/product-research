@@ -13,6 +13,7 @@ Evaluate a candidate product supplied by the user. Do not use this version to di
 - **Research before conclusions.** Every material factual claim must trace to evidence.
 - Classify important data as exactly one of `Observed`, `Estimated`, `Calculated`, or `Unknown`. Never present `Estimated` as `Observed`.
 - Missing evidence must not be converted into assumed facts. Research it, use a bounded evidence-supported `Estimated` value, or mark it `Unknown`.
+- For every material Evidence need, follow [the provider-first acquisition policy](references/provider-first-acquisition-policy.md) to identify any applicable preferred structured operation, preflight its configured state, attempt a usable preferred path first, preserve execution and semantic coverage separately, and obtain explicit approval before any equivalent substitution fallback; planned complementary evidence remains allowed.
 - When reliable sources conflict, surface the conflict, compare quality and freshness, and reduce confidence when unresolved. Do not hide adverse evidence.
 - Run `Risk Gate` and `Unit Economics Gate` independently of the weighted score. Aggregate scoring cannot override a fatal risk or failed economics gate.
 - After Phase 6 results and Unit Economics are available, the Agent/caller may submit explicit qualitative judgments to `product_research/initial_scoring.py`; it validates ownership, Evidence-ID traceability, nested uncertainty, and Confidence ceilings, then emits the existing eight-slot `DimensionScores`. It does not generate or infer qualitative judgments.
@@ -31,6 +32,7 @@ Read each reference before performing its stage:
 | Research planning and dimension analysis | [references/methodology.md](references/methodology.md) |
 | Ordered research planning, injected acquisition, raw-finding normalization, and run coverage/status | [product_research/research_orchestration.py](product_research/research_orchestration.py) |
 | Fixed five-family acquisition composition | [product_research/research_adapters.py](product_research/research_adapters.py) |
+| Provider-first operation preference, capability preflight, semantic coverage, and fallback approval | [references/provider-first-acquisition-policy.md](references/provider-first-acquisition-policy.md) |
 | Evidence collection, status, freshness, and confidence | [references/evidence-policy.md](references/evidence-policy.md) |
 | Evidence representation and Evidence ID boundary | [product_research/evidence.py](product_research/evidence.py) |
 | Multi-source consistency, source independence, conflict preservation, missing information, and claim-level Confidence | [product_research/evidence_assessment.py](product_research/evidence_assessment.py) |
@@ -51,6 +53,11 @@ Read each reference before performing its stage:
 For a full evaluation, read all five references and the shared Evidence representation when creating or exchanging Evidence records, and the Evidence assessment boundary before combining multiple sources into a claim-level Confidence. For a narrower follow-up, read every reference governing the requested stage and any upstream evidence or gate rules it depends on.
 
 ## Configured DataForSEO Acquisition Runtime
+
+Provider-first operation selection, non-billable preflight, semantic coverage,
+and substitution approval are governed by
+[references/provider-first-acquisition-policy.md](references/provider-first-acquisition-policy.md).
+This section documents only the existing configured runtime contract.
 
 The external `dataforseo_acquisition_runtime.py` module composes the existing
 DataForSEO providers into the existing `ResearchSourceAdapters` value. For the
